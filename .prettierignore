@@ -1,0 +1,6 @@
+.env
+artifacts
+cache
+dist
+node_modules
+typechain-types
