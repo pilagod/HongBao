@@ -3,6 +3,10 @@ pragma solidity >=0.7.0;
 pragma abicoder v2;
 
 interface IHongBao {
+    event CampaignCreated(uint256 campaignId);
+    event HongBaoWon(string name, uint256 amount);
+    event HongBaoLost();
+
     struct Award {
         string name;
         uint16 count;
