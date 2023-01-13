@@ -38,6 +38,7 @@ describe("HongBao", () => {
     let snapshot: SnapshotRestorer
 
     let operator: Signer
+
     let hongBao: HongBao
     let token: ERC20Mintable
 
@@ -123,6 +124,63 @@ describe("HongBao", () => {
         })
     })
 
+    describe("closeCampaign", () => {
+        it("should not allow to close unexpired campaign", async () => {
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: (await time.latest()) + 60,
+                participants: [],
+                awards: [],
+            })
+
+            const tx = hongBao.connect(operator).closeCampaign(campaignId)
+
+            await expect(tx).to.be.reverted
+        })
+
+        it("should now allow other to close the campaign", async () => {
+            const participants = await createParticipants(1)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: (await time.latest()) + 60,
+                participants,
+                awards,
+            })
+            await time.increase(600)
+
+            await expect(
+                hongBao.connect(participants[0]).closeCampaign(campaignId),
+            ).to.be.reverted
+        })
+
+        it("should collect remaining amount back and delete the campaign", async () => {
+            const participants = await createParticipants(2)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: (await time.latest()) + 60,
+                participants,
+                awards,
+            })
+            const { amount } = await drawToFirstWon(campaignId, participants)
+
+            await time.increase(600)
+
+            const balanceBefore = await token.balanceOf(operator.getAddress())
+            await hongBao.connect(operator).closeCampaign(campaignId)
+            const balanceAfter = await token.balanceOf(operator.getAddress())
+
+            expect(balanceAfter.sub(balanceBefore)).to.equal(
+                totalAwardAmount.sub(amount),
+            )
+            await expect(hongBao.getCampaignInfo(campaignId)).to.be.reverted
+        })
+    })
+
     describe("draw", () => {
         it("should allow participant to draw only once", async () => {
             const participants = await createParticipants(1)
@@ -150,7 +208,7 @@ describe("HongBao", () => {
                 participants,
                 awards,
             })
-            await time.increase(120)
+            await time.increase(600)
 
             await expect(draw(campaignId, participants)).to.be.reverted
         })
@@ -274,6 +332,25 @@ describe("HongBao", () => {
         }
 
         return result
+    }
+
+    async function drawToFirstWon(
+        campaignId: BigNumberish,
+        participants: Signer[],
+    ): Promise<{ name: string; amount: BigNumber }> {
+        for (const p of participants) {
+            const drawTx = await hongBao.connect(p).draw(campaignId)
+            const drawReceipt = await drawTx.wait()
+            const [won] = ContractUtil.parseEventLogsByName(
+                hongBao,
+                "HongBaoWon",
+                drawReceipt.logs,
+            )
+            if (won) {
+                return { name: won.args.name, amount: won.args.amount }
+            }
+        }
+        throw new Error("No one wins a HongBao")
     }
 
     async function getTotalDrawAmount(

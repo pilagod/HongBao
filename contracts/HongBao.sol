@@ -14,6 +14,7 @@ contract HongBao is IHongBao, Ownable {
     struct Campaign {
         uint256 id;
         string name;
+        address owner;
         address token;
         uint256 expiry;
         uint256 remainingAwardAmount;
@@ -55,6 +56,7 @@ contract HongBao is IHongBao, Ownable {
         Campaign storage c = campaign[campaignId];
         c.id = campaignId;
         c.name = name;
+        c.owner = msg.sender;
         c.token = token;
         c.expiry = expiry;
         c.remainingAwardAmount = totalAwardAmount;
@@ -72,12 +74,20 @@ contract HongBao is IHongBao, Ownable {
     }
 
     function closeCampaign(uint256 campaignId) external override {
-        return;
+        Campaign storage c = campaign[campaignId];
+        require(c.id > 0, "Campaign doesn't exist");
+        require(c.owner == msg.sender, "Only owner can close the campaign");
+        require(c.expiry <= block.timestamp, "Campaign is still in progress");
+
+        IERC20(c.token).safeTransfer(msg.sender, c.remainingAwardAmount);
+        delete campaign[campaignId];
     }
 
     function getCampaignInfo(
         uint256 campaignId
     ) external view override returns (CampaignInfo memory campaignInfo) {
+        Campaign storage c = campaign[campaignId];
+        require(c.id > 0, "Campaign doesn't exist");
         return
             CampaignInfo({
                 token: address(0),
