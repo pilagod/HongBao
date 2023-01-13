@@ -88,13 +88,11 @@ describe("HongBao", () => {
         })
 
         it("should not allow to create campaign which is already expired", async () => {
-            const currentTimestamp = await time.latest()
-
-            const createExpiredCampaign = () =>
+            const createExpiredCampaign = async () =>
                 createCampaign(operator, {
                     name: "Test",
                     token: token.address,
-                    expiry: currentTimestamp - 1,
+                    expiry: (await time.latest()) - 1,
                     participants: [],
                     awards: [],
                 })
