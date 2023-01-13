@@ -1,12 +1,12 @@
 import { expect } from "chai"
-import { BigNumber, Signer, Wallet } from "ethers"
+import { BigNumber, BigNumberish, Signer, Wallet } from "ethers"
 import { ethers } from "hardhat"
 import {
     SnapshotRestorer,
     setBalance,
     takeSnapshot,
 } from "@nomicfoundation/hardhat-network-helpers"
-import { ERC20Mintable, HongBao } from "~/typechain-types"
+import { ERC20Mintable, HongBao, IHongBao } from "~/typechain-types"
 import { ContractUtil } from "~/util"
 
 describe("HongBao", () => {
@@ -39,7 +39,7 @@ describe("HongBao", () => {
         await snapshot.restore()
     })
 
-    it("should be able to draw all the awards", async () => {
+    it("should be able to draw all the awards when participants is more than awards", async () => {
         const awards = [
             {
                 name: "First Prize",
@@ -59,42 +59,15 @@ describe("HongBao", () => {
         ]
         const participants = await createParticipants(10)
 
-        const createCampaignTx = await hongBao.connect(operator).createCampaign(
-            "Test",
-            token.address,
-            Date.now(),
-            participants.map((p) => p.getAddress()),
+        const campaignId = await createCampaign(operator, {
+            name: "Test",
+            token: token.address,
+            expiry: Date.now(),
+            participants,
             awards,
-        )
-        const createCampaignReceipt = await createCampaignTx.wait()
-        const [
-            {
-                args: { campaignId },
-            },
-        ] = ContractUtil.parseEventLogsByName(
-            hongBao,
-            "CampaignCreated",
-            createCampaignReceipt.logs,
-        )
+        })
 
-        const drawResult = {
-            wonCount: 0,
-            lostCount: 0,
-        }
-        for (const p of participants) {
-            const drawTx = await hongBao.connect(p).draw(campaignId)
-            const drawReceipt = await drawTx.wait()
-            drawResult.wonCount += ContractUtil.parseEventLogsByName(
-                hongBao,
-                "HongBaoWon",
-                drawReceipt.logs,
-            ).length
-            drawResult.lostCount += ContractUtil.parseEventLogsByName(
-                hongBao,
-                "HongBaoLost",
-                drawReceipt.logs,
-            ).length
-        }
+        const drawResult = await drawAll(campaignId, participants)
         expect(drawResult.wonCount).to.equal(6)
         expect(drawResult.lostCount).to.equal(4)
 
@@ -110,9 +83,38 @@ describe("HongBao", () => {
         expect(totalDrawAmount).to.equal(totalAwardAmount)
     })
 
+    async function createCampaign(
+        owner: Signer,
+        args: {
+            name: string
+            token: string
+            expiry: number
+            participants: Signer[]
+            awards: IHongBao.AwardStruct[]
+        },
+    ): Promise<BigNumber> {
+        const createCampaignTx = await hongBao.connect(owner).createCampaign(
+            args.name,
+            args.token,
+            args.expiry,
+            args.participants.map((p) => p.getAddress()),
+            args.awards,
+        )
+        const createCampaignReceipt = await createCampaignTx.wait()
+        const [
+            {
+                args: { campaignId },
+            },
+        ] = ContractUtil.parseEventLogsByName(
+            hongBao,
+            "CampaignCreated",
+            createCampaignReceipt.logs,
+        )
+        return campaignId
+    }
+
     async function createParticipants(count: number): Promise<Signer[]> {
         const participants: Signer[] = []
-
         for (let i = 0; i < count; i++) {
             const participant = Wallet.createRandom().connect(ethers.provider)
             await setBalance(
@@ -121,7 +123,28 @@ describe("HongBao", () => {
             )
             participants.push(participant)
         }
-
         return participants
+    }
+
+    async function drawAll(campaignId: BigNumberish, participants: Signer[]) {
+        const result = {
+            wonCount: 0,
+            lostCount: 0,
+        }
+        for (const p of participants) {
+            const drawTx = await hongBao.connect(p).draw(campaignId)
+            const drawReceipt = await drawTx.wait()
+            result.wonCount += ContractUtil.parseEventLogsByName(
+                hongBao,
+                "HongBaoWon",
+                drawReceipt.logs,
+            ).length
+            result.lostCount += ContractUtil.parseEventLogsByName(
+                hongBao,
+                "HongBaoLost",
+                drawReceipt.logs,
+            ).length
+        }
+        return result
     }
 })

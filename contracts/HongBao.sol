@@ -112,8 +112,8 @@ contract HongBao is IHongBao {
         c.remainingDrawCount -= 1;
 
         if (award.amount == 0) {
-           emit HongBaoLost();
-           return 0;
+            emit HongBaoLost();
+            return 0;
         }
 
         IERC20(c.token).safeTransfer(msg.sender, award.amount);
