@@ -6,10 +6,33 @@ import {
     setBalance,
     takeSnapshot,
 } from "@nomicfoundation/hardhat-network-helpers"
-import { ERC20Mintable, HongBao, IHongBao } from "~/typechain-types"
+import { ERC20Mintable, HongBao, IERC20, IHongBao } from "~/typechain-types"
 import { ContractUtil } from "~/util"
 
 describe("HongBao", () => {
+    const awards = [
+        {
+            name: "First Prize",
+            count: 1,
+            amount: ethers.utils.parseEther("100"),
+        },
+        {
+            name: "Second Prize",
+            count: 2,
+            amount: ethers.utils.parseEther("10"),
+        },
+        {
+            name: "Third Prize",
+            count: 3,
+            amount: ethers.utils.parseEther("1"),
+        },
+    ]
+    const totalAwardAmount = awards.reduce(
+        (r, a) => r.add(a.amount.mul(a.count)),
+        BigNumber.from(0),
+    )
+    const totalAwardCount = awards.reduce((r, a) => r + a.count, 0)
+
     let snapshot: SnapshotRestorer
 
     let operator: Signer
@@ -40,23 +63,6 @@ describe("HongBao", () => {
     })
 
     it("should be able to draw all the awards when participants is more than awards", async () => {
-        const awards = [
-            {
-                name: "First Prize",
-                count: 1,
-                amount: ethers.utils.parseEther("100"),
-            },
-            {
-                name: "Second Prize",
-                count: 2,
-                amount: ethers.utils.parseEther("10"),
-            },
-            {
-                name: "Third Prize",
-                count: 3,
-                amount: ethers.utils.parseEther("1"),
-            },
-        ]
         const participants = await createParticipants(10)
 
         const campaignId = await createCampaign(operator, {
@@ -68,19 +74,32 @@ describe("HongBao", () => {
         })
 
         const drawResult = await drawAll(campaignId, participants)
-        expect(drawResult.wonCount).to.equal(6)
-        expect(drawResult.lostCount).to.equal(4)
-
-        let totalDrawAmount = BigNumber.from(0)
-        for (const p of participants) {
-            const balance = await token.balanceOf(p.getAddress())
-            totalDrawAmount = totalDrawAmount.add(balance)
-        }
-        const totalAwardAmount = awards.reduce(
-            (r, a) => r.add(a.amount.mul(a.count)),
-            BigNumber.from(0),
+        expect(drawResult.wonCount).to.equal(totalAwardCount)
+        expect(drawResult.lostCount).to.equal(
+            participants.length - totalAwardCount,
         )
+
+        const totalDrawAmount = await getTotalDrawAmount(token, participants)
         expect(totalDrawAmount).to.equal(totalAwardAmount)
+    })
+
+    it("should let every participant get award when participants is less than awards", async () => {
+        const participants = await createParticipants(5)
+
+        const campaignId = await createCampaign(operator, {
+            name: "Test",
+            token: token.address,
+            expiry: Date.now(),
+            participants,
+            awards,
+        })
+
+        const drawResult = await drawAll(campaignId, participants)
+        expect(drawResult.wonCount).to.equal(participants.length)
+        expect(drawResult.lostCount).to.equal(0)
+
+        const totalDrawAmount = await getTotalDrawAmount(token, participants)
+        expect(totalDrawAmount).to.be.lt(totalAwardAmount)
     })
 
     async function createCampaign(
@@ -146,5 +165,17 @@ describe("HongBao", () => {
             ).length
         }
         return result
+    }
+
+    async function getTotalDrawAmount(
+        token: IERC20,
+        participants: Signer[],
+    ): Promise<BigNumber> {
+        let totalDrawAmount = BigNumber.from(0)
+        for (const p of participants) {
+            const balance = await token.balanceOf(p.getAddress())
+            totalDrawAmount = totalDrawAmount.add(balance)
+        }
+        return totalDrawAmount
     }
 })
