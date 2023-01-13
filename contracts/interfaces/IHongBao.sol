@@ -13,6 +13,15 @@ interface IHongBao {
         uint256 amount;
     }
 
+    struct CampaignInfo {
+        uint256 id;
+        string name;
+        address token;
+        uint256 expiry;
+        uint256 remainingAwardAmount;
+        Award[] remainingAwards;
+    }
+
     function createCampaign(
         string calldata name,
         address token,
@@ -23,15 +32,9 @@ interface IHongBao {
 
     function closeCampaign(uint256 campaignId) external;
 
-    struct CampaignInfo {
-        address token;
-        uint256 remainingAwardAmount;
-        Award[] remainingAwards;
-    }
+    function draw(uint256 campaignId) external returns (uint256 amount);
 
     function getCampaignInfo(
         uint256 campaignId
     ) external view returns (CampaignInfo memory campaignInfo);
-
-    function draw(uint256 campaignId) external returns (uint256 amount);
 }

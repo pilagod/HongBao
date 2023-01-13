@@ -83,19 +83,6 @@ contract HongBao is IHongBao, Ownable {
         delete campaign[campaignId];
     }
 
-    function getCampaignInfo(
-        uint256 campaignId
-    ) external view override returns (CampaignInfo memory campaignInfo) {
-        Campaign storage c = campaign[campaignId];
-        require(c.id > 0, "Campaign doesn't exist");
-        return
-            CampaignInfo({
-                token: address(0),
-                remainingAwardAmount: 0,
-                remainingAwards: new Award[](0)
-            });
-    }
-
     function draw(
         uint256 campaignId
     ) external override returns (uint256 amount) {
@@ -140,6 +127,22 @@ contract HongBao is IHongBao, Ownable {
         emit HongBaoWon(award.name, award.amount);
 
         return award.amount;
+    }
+
+    function getCampaignInfo(
+        uint256 campaignId
+    ) external view override returns (CampaignInfo memory campaignInfo) {
+        Campaign storage c = campaign[campaignId];
+        require(c.id > 0, "Campaign doesn't exist");
+        return
+            CampaignInfo({
+                id: campaignId,
+                name: c.name,
+                token: c.token,
+                expiry: c.expiry,
+                remainingAwardAmount: c.remainingAwardAmount,
+                remainingAwards: c.remainingAwards 
+            });
     }
 
     /* admin */

@@ -224,9 +224,9 @@ describe("HongBao", () => {
                 awards,
             })
 
-            const drawResult = await draw(campaignId, participants)
-            expect(drawResult.wonCount).to.equal(totalAwardCount)
-            expect(drawResult.lostCount).to.equal(
+            const result = await draw(campaignId, participants)
+            expect(result.count.won).to.equal(totalAwardCount)
+            expect(result.count.lost).to.equal(
                 participants.length - totalAwardCount,
             )
 
@@ -248,15 +248,48 @@ describe("HongBao", () => {
                 awards,
             })
 
-            const drawResult = await draw(campaignId, participants)
-            expect(drawResult.wonCount).to.equal(participants.length)
-            expect(drawResult.lostCount).to.equal(0)
+            const result = await draw(campaignId, participants)
+            expect(result.count.won).to.equal(participants.length)
+            expect(result.count.lost).to.equal(0)
 
             const totalDrawAmount = await getTotalDrawAmount(
                 token,
                 participants,
             )
             expect(totalDrawAmount).to.be.lt(totalAwardAmount)
+        })
+    })
+
+    describe("getCampaignInfo", () => {
+        it("should get campaign info", async () => {
+            const participants = await createParticipants(1)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: Date.now(),
+                participants,
+                awards,
+            })
+            // Since awards are more than participants, every draw must win an award.
+            const {
+                logs: [award],
+            } = await draw(campaignId, participants)
+
+            const campaign = await hongBao.getCampaignInfo(campaignId)
+            expect(campaign.id).to.equal(campaignId)
+            expect(campaign.name).to.equal("Test")
+            expect(campaign.token).to.equal(token.address)
+            expect(campaign.remainingAwardAmount).to.equal(
+                totalAwardAmount.sub(award.amount),
+            )
+            for (let i = 0; i < awards.length; i++) {
+                if (awards[i].name === award.name) {
+                    expect(campaign.remainingAwards[i].count).to.equal(
+                        awards[i].count - 1,
+                    )
+                }
+            }
         })
     })
 
@@ -312,23 +345,45 @@ describe("HongBao", () => {
 
     async function draw(campaignId: BigNumberish, participants: Signer[]) {
         const result = {
-            wonCount: 0,
-            lostCount: 0,
+            count: {
+                won: 0,
+                lost: 0,
+            },
+            logs: [] as {
+                name: string
+                amount: BigNumber
+            }[],
         }
 
         for (const p of participants) {
             const drawTx = await hongBao.connect(p).draw(campaignId)
             const drawReceipt = await drawTx.wait()
-            result.wonCount += ContractUtil.parseEventLogsByName(
+
+            const wonLogs = ContractUtil.parseEventLogsByName(
                 hongBao,
                 "HongBaoWon",
                 drawReceipt.logs,
-            ).length
-            result.lostCount += ContractUtil.parseEventLogsByName(
+            )
+            result.count.won += wonLogs.length
+            result.logs.push(
+                ...wonLogs.map((l) => ({
+                    name: l.args.name,
+                    amount: l.args.amount,
+                })),
+            )
+
+            const lostLogs = ContractUtil.parseEventLogsByName(
                 hongBao,
                 "HongBaoLost",
                 drawReceipt.logs,
-            ).length
+            )
+            result.count.lost += lostLogs.length
+            result.logs.push(
+                ...lostLogs.map(() => ({
+                    name: "",
+                    amount: BigNumber.from(0),
+                })),
+            )
         }
 
         return result
