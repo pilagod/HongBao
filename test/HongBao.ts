@@ -5,6 +5,7 @@ import {
     SnapshotRestorer,
     setBalance,
     takeSnapshot,
+    time,
 } from "@nomicfoundation/hardhat-network-helpers"
 import { ERC20Mintable, HongBao, IERC20, IHongBao } from "~/typechain-types"
 import { ContractUtil } from "~/util"
@@ -102,6 +103,67 @@ describe("HongBao", () => {
         expect(totalDrawAmount).to.be.lt(totalAwardAmount)
     })
 
+    describe("createCampaign", async () => {
+        it("should not allow to create campaign when token balance is not enough to cover all the awards", async () => {
+            const ownerBalance = await token.balanceOf(operator.getAddress())
+
+            const ownerBalanceNotEnough = () =>
+                hongBao.connect(operator).createCampaign(
+                    "Test",
+                    token.address,
+                    Date.now(),
+                    [],
+                    [
+                        {
+                            name: "Prize",
+                            count: 100,
+                            amount: ownerBalance,
+                        },
+                    ],
+                )
+
+            await expect(ownerBalanceNotEnough()).to.be.reverted
+        })
+
+        it("should not allow to create campaign which is already expired", async () => {
+            const currentTimestamp = await time.latest()
+
+            const createExpiredCampaign = () =>
+                hongBao
+                    .connect(operator)
+                    .createCampaign(
+                        "Test",
+                        token.address,
+                        currentTimestamp - 1,
+                        [],
+                        [],
+                    )
+
+            await expect(createExpiredCampaign()).to.be.reverted
+        })
+
+        it("should not allow to create campaign when fee is not enough", async () => {
+            await hongBao.setCreateCampaignFee(ethers.utils.parseEther("100"))
+
+            const createCampaignFeeNotEnough = () =>
+                hongBao.connect(operator).createCampaign(
+                    "Test",
+                    token.address,
+                    Date.now(),
+
+                    [],
+                    [],
+                    {
+                        value: ethers.utils.parseEther("1"),
+                    },
+                )
+
+            await expect(createCampaignFeeNotEnough()).to.be.reverted
+        })
+    })
+
+    /* utils */
+
     async function createCampaign(
         owner: Signer,
         args: {
@@ -129,11 +191,13 @@ describe("HongBao", () => {
             "CampaignCreated",
             createCampaignReceipt.logs,
         )
+
         return campaignId
     }
 
     async function createParticipants(count: number): Promise<Signer[]> {
         const participants: Signer[] = []
+
         for (let i = 0; i < count; i++) {
             const participant = Wallet.createRandom().connect(ethers.provider)
             await setBalance(
@@ -142,6 +206,7 @@ describe("HongBao", () => {
             )
             participants.push(participant)
         }
+
         return participants
     }
 
@@ -150,6 +215,7 @@ describe("HongBao", () => {
             wonCount: 0,
             lostCount: 0,
         }
+
         for (const p of participants) {
             const drawTx = await hongBao.connect(p).draw(campaignId)
             const drawReceipt = await drawTx.wait()
@@ -164,6 +230,7 @@ describe("HongBao", () => {
                 drawReceipt.logs,
             ).length
         }
+
         return result
     }
 
@@ -172,10 +239,12 @@ describe("HongBao", () => {
         participants: Signer[],
     ): Promise<BigNumber> {
         let totalDrawAmount = BigNumber.from(0)
+
         for (const p of participants) {
             const balance = await token.balanceOf(p.getAddress())
             totalDrawAmount = totalDrawAmount.add(balance)
         }
+
         return totalDrawAmount
     }
 })

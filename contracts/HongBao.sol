@@ -2,12 +2,13 @@
 pragma solidity =0.7.6;
 pragma abicoder v2;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "./interfaces/IHongBao.sol";
 
-contract HongBao is IHongBao {
+contract HongBao is IHongBao, Ownable {
     using SafeERC20 for IERC20;
 
     struct Campaign {
@@ -21,6 +22,8 @@ contract HongBao is IHongBao {
         mapping(address => bool) participants;
     }
 
+    uint256 public createCampaignFee = 0;
+
     uint256 private lastCampaignId = 0;
     mapping(uint256 => Campaign) private campaign;
 
@@ -30,7 +33,10 @@ contract HongBao is IHongBao {
         uint256 expiry,
         address[] calldata participants,
         Award[] calldata awards
-    ) external override returns (uint256 campaignId) {
+    ) external payable override returns (uint256 campaignId) {
+        require(msg.value >= createCampaignFee, "Fee is not enough to create campaign");
+        require(expiry > block.timestamp, "Campaign is already expired");
+
         uint256 totalAwardAmount = 0;
         uint256 totalAwardCount = 0;
         for (uint i = 0; i < awards.length; i++) {
@@ -120,5 +126,11 @@ contract HongBao is IHongBao {
         emit HongBaoWon(award.name, award.amount);
 
         return award.amount;
+    }
+
+    /* admin */
+
+    function setCreateCampaignFee(uint256 amount) external onlyOwner {
+       createCampaignFee = amount;
     }
 }

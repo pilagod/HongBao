@@ -19,7 +19,7 @@ interface IHongBao {
         uint256 expiry,
         address[] calldata participants,
         Award[] calldata awards
-    ) external returns (uint256 campaignId);
+    ) external payable returns (uint256 campaignId);
 
     function closeCampaign(uint256 campaignId) external;
 
