@@ -64,46 +64,6 @@ describe("HongBao", () => {
         await snapshot.restore()
     })
 
-    it("should be able to draw all the awards when participants is more than awards", async () => {
-        const participants = await createParticipants(10)
-
-        const campaignId = await createCampaign(operator, {
-            name: "Test",
-            token: token.address,
-            expiry: Date.now(),
-            participants,
-            awards,
-        })
-
-        const drawResult = await drawAll(campaignId, participants)
-        expect(drawResult.wonCount).to.equal(totalAwardCount)
-        expect(drawResult.lostCount).to.equal(
-            participants.length - totalAwardCount,
-        )
-
-        const totalDrawAmount = await getTotalDrawAmount(token, participants)
-        expect(totalDrawAmount).to.equal(totalAwardAmount)
-    })
-
-    it("should let every participant get award when participants is less than awards", async () => {
-        const participants = await createParticipants(5)
-
-        const campaignId = await createCampaign(operator, {
-            name: "Test",
-            token: token.address,
-            expiry: Date.now(),
-            participants,
-            awards,
-        })
-
-        const drawResult = await drawAll(campaignId, participants)
-        expect(drawResult.wonCount).to.equal(participants.length)
-        expect(drawResult.lostCount).to.equal(0)
-
-        const totalDrawAmount = await getTotalDrawAmount(token, participants)
-        expect(totalDrawAmount).to.be.lt(totalAwardAmount)
-    })
-
     describe("createCampaign", async () => {
         it("should not allow to create campaign when token balance is not enough to cover all the awards", async () => {
             const ownerBalance = await token.balanceOf(operator.getAddress())
@@ -122,6 +82,7 @@ describe("HongBao", () => {
                         },
                     ],
                 })
+
             await expect(ownerBalanceNotEnough()).to.be.reverted
         })
 
@@ -159,6 +120,85 @@ describe("HongBao", () => {
                 )
 
             await expect(createCampaignFeeNotEnough()).to.be.reverted
+        })
+    })
+
+    describe("draw", () => {
+        it("should allow participant to draw only once", async () => {
+            const participants = await createParticipants(1)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: Date.now(),
+                participants,
+                awards,
+            })
+
+            await draw(campaignId, participants)
+
+            await expect(draw(campaignId, participants)).to.be.reverted
+        })
+
+        it("should not allow to draw expired campaign", async () => {
+            const participants = await createParticipants(1)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: (await time.latest()) + 60,
+                participants,
+                awards,
+            })
+            await time.increase(120)
+
+            await expect(draw(campaignId, participants)).to.be.reverted
+        })
+
+        it("should be able to draw all the awards when participants is more than awards", async () => {
+            const participants = await createParticipants(10)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: Date.now(),
+                participants,
+                awards,
+            })
+
+            const drawResult = await draw(campaignId, participants)
+            expect(drawResult.wonCount).to.equal(totalAwardCount)
+            expect(drawResult.lostCount).to.equal(
+                participants.length - totalAwardCount,
+            )
+
+            const totalDrawAmount = await getTotalDrawAmount(
+                token,
+                participants,
+            )
+            expect(totalDrawAmount).to.equal(totalAwardAmount)
+        })
+
+        it("should let every participant draw award when participants is less than awards", async () => {
+            const participants = await createParticipants(5)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: Date.now(),
+                participants,
+                awards,
+            })
+
+            const drawResult = await draw(campaignId, participants)
+            expect(drawResult.wonCount).to.equal(participants.length)
+            expect(drawResult.lostCount).to.equal(0)
+
+            const totalDrawAmount = await getTotalDrawAmount(
+                token,
+                participants,
+            )
+            expect(totalDrawAmount).to.be.lt(totalAwardAmount)
         })
     })
 
@@ -212,7 +252,7 @@ describe("HongBao", () => {
         return participants
     }
 
-    async function drawAll(campaignId: BigNumberish, participants: Signer[]) {
+    async function draw(campaignId: BigNumberish, participants: Signer[]) {
         const result = {
             wonCount: 0,
             lostCount: 0,

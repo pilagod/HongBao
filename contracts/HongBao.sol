@@ -91,6 +91,10 @@ contract HongBao is IHongBao, Ownable {
     ) external override returns (uint256 amount) {
         Campaign storage c = campaign[campaignId];
         require(c.id > 0, "Campaign doesn't exist");
+        require(c.expiry > block.timestamp, "Campaign is already expired");
+        require(c.participants[msg.sender], "Not authorzied to draw");
+
+        c.participants[msg.sender] = false;
 
         uint256 seed = (uint256(
             keccak256(
