@@ -59,7 +59,7 @@ describe("HongBao", () => {
         ]
         const participants = await createParticipants(10)
 
-        const createCampaignTx = await hongBao.createCampaign(
+        const createCampaignTx = await hongBao.connect(operator).createCampaign(
             "Test",
             token.address,
             Date.now(),
@@ -114,7 +114,7 @@ describe("HongBao", () => {
         const participants: Signer[] = []
 
         for (let i = 0; i < count; i++) {
-            const participant = Wallet.createRandom()
+            const participant = Wallet.createRandom().connect(ethers.provider)
             await setBalance(
                 participant.address,
                 ethers.utils.parseEther("100"),
