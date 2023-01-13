@@ -1,6 +1,7 @@
 import { expect } from "chai"
 import { BigNumber, BigNumberish, Signer, Wallet } from "ethers"
 import { ethers } from "hardhat"
+import { PayableOverrides } from "@ethersproject/contracts"
 import {
     SnapshotRestorer,
     setBalance,
@@ -108,20 +109,19 @@ describe("HongBao", () => {
             const ownerBalance = await token.balanceOf(operator.getAddress())
 
             const ownerBalanceNotEnough = () =>
-                hongBao.connect(operator).createCampaign(
-                    "Test",
-                    token.address,
-                    Date.now(),
-                    [],
-                    [
+                createCampaign(operator, {
+                    name: "Test",
+                    token: token.address,
+                    expiry: Date.now(),
+                    participants: [],
+                    awards: [
                         {
                             name: "Prize",
                             count: 100,
                             amount: ownerBalance,
                         },
                     ],
-                )
-
+                })
             await expect(ownerBalanceNotEnough()).to.be.reverted
         })
 
@@ -129,15 +129,13 @@ describe("HongBao", () => {
             const currentTimestamp = await time.latest()
 
             const createExpiredCampaign = () =>
-                hongBao
-                    .connect(operator)
-                    .createCampaign(
-                        "Test",
-                        token.address,
-                        currentTimestamp - 1,
-                        [],
-                        [],
-                    )
+                createCampaign(operator, {
+                    name: "Test",
+                    token: token.address,
+                    expiry: currentTimestamp - 1,
+                    participants: [],
+                    awards: [],
+                })
 
             await expect(createExpiredCampaign()).to.be.reverted
         })
@@ -146,13 +144,15 @@ describe("HongBao", () => {
             await hongBao.setCreateCampaignFee(ethers.utils.parseEther("100"))
 
             const createCampaignFeeNotEnough = () =>
-                hongBao.connect(operator).createCampaign(
-                    "Test",
-                    token.address,
-                    Date.now(),
-
-                    [],
-                    [],
+                createCampaign(
+                    operator,
+                    {
+                        name: "Test",
+                        token: token.address,
+                        expiry: Date.now(),
+                        participants: [],
+                        awards: [],
+                    },
                     {
                         value: ethers.utils.parseEther("1"),
                     },
@@ -173,6 +173,7 @@ describe("HongBao", () => {
             participants: Signer[]
             awards: IHongBao.AwardStruct[]
         },
+        overrides?: PayableOverrides,
     ): Promise<BigNumber> {
         const createCampaignTx = await hongBao.connect(owner).createCampaign(
             args.name,
@@ -180,6 +181,7 @@ describe("HongBao", () => {
             args.expiry,
             args.participants.map((p) => p.getAddress()),
             args.awards,
+            overrides ?? {},
         )
         const createCampaignReceipt = await createCampaignTx.wait()
         const [
