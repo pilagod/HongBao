@@ -66,7 +66,7 @@ describe("HongBao", () => {
     })
 
     describe("createCampaign", async () => {
-        it("should not allow to create campaign when token balance is not enough to cover all the awards", async () => {
+        it("should not allow to create campaign when owner's token balance is not enough to cover all the awards", async () => {
             const ownerBalance = await token.balanceOf(operator.getAddress())
 
             const ownerBalanceNotEnough = () =>
@@ -139,7 +139,7 @@ describe("HongBao", () => {
             await expect(tx).to.be.reverted
         })
 
-        it("should now allow other to close the campaign", async () => {
+        it("should not allow other than owner to close the campaign", async () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
@@ -147,7 +147,7 @@ describe("HongBao", () => {
                 token: token.address,
                 expiry: (await time.latest()) + 60,
                 participants,
-                awards,
+                awards: [],
             })
             await time.increase(600)
 
@@ -157,7 +157,7 @@ describe("HongBao", () => {
         })
 
         it("should collect remaining amount back and delete the campaign", async () => {
-            const participants = await createParticipants(2)
+            const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
                 name: "Test",
@@ -166,7 +166,9 @@ describe("HongBao", () => {
                 participants,
                 awards,
             })
-            const { amount } = await drawToFirstWon(campaignId, participants)
+            const {
+                logs: [award],
+            } = await draw(campaignId, participants)
 
             await time.increase(600)
 
@@ -175,7 +177,7 @@ describe("HongBao", () => {
             const balanceAfter = await token.balanceOf(operator.getAddress())
 
             expect(balanceAfter.sub(balanceBefore)).to.equal(
-                totalAwardAmount.sub(amount),
+                totalAwardAmount.sub(award.amount),
             )
             await expect(hongBao.getCampaignInfo(campaignId)).to.be.reverted
         })
@@ -387,25 +389,6 @@ describe("HongBao", () => {
         }
 
         return result
-    }
-
-    async function drawToFirstWon(
-        campaignId: BigNumberish,
-        participants: Signer[],
-    ): Promise<{ name: string; amount: BigNumber }> {
-        for (const p of participants) {
-            const drawTx = await hongBao.connect(p).draw(campaignId)
-            const drawReceipt = await drawTx.wait()
-            const [won] = ContractUtil.parseEventLogsByName(
-                hongBao,
-                "HongBaoWon",
-                drawReceipt.logs,
-            )
-            if (won) {
-                return { name: won.args.name, amount: won.args.amount }
-            }
-        }
-        throw new Error("No one wins a HongBao")
     }
 
     async function getTotalDrawAmount(
