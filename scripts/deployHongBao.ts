@@ -1,4 +1,5 @@
 import { ethers } from "hardhat"
+import { run } from "./utils"
 
 async function main() {
     const [operator] = await ethers.getSigners()
@@ -12,9 +13,4 @@ async function main() {
     )
 }
 
-main()
-    .then(() => process.exit(0))
-    .catch((e) => {
-        console.error(e)
-        process.exit(1)
-    })
+run(main)
