@@ -1,6 +1,6 @@
-# HongBao Contract
+# HongBao
 
-## Addresses
+## Contract Addresses
 
 * Polygon Mumbai: [0x8f955E5EB5e18751D8C70560f8A4DC8f9ee8efB0](https://mumbai.polygonscan.com/address/0x8f955E5EB5e18751D8C70560f8A4DC8f9ee8efB0)
 
