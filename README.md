@@ -1,8 +1,10 @@
 # HongBao
 
+Contracts and operating scripts for HongBao protocol.
+
 ## Contract Addresses
 
-* Polygon Mumbai
+### Polygon Mumbai
 
 | Contract | Address |
 | -------- | ------- |
