@@ -91,7 +91,7 @@ contract HongBao is IHongBao, Ownable {
 
     function draw(
         uint256 campaignId
-    ) external override returns (uint256 amount) {
+    ) external override returns (string memory name, uint256 amount) {
         Campaign storage c = findCampaign(campaignId);
         require(c.expiry > block.timestamp, "Campaign is already expired");
         require(c.participant[msg.sender] > 0, "Not authorized to draw");
@@ -125,13 +125,13 @@ contract HongBao is IHongBao, Ownable {
 
         if (award.amount == 0) {
             emit HongBaoLost();
-            return 0;
+            return ("", 0);
         }
 
         IERC20(c.token).safeTransfer(msg.sender, award.amount);
         emit HongBaoWon(award.name, award.amount);
 
-        return award.amount;
+        return (award.name, award.amount);
     }
 
     function getCampaignInfo(
@@ -164,7 +164,9 @@ contract HongBao is IHongBao, Ownable {
 
     /* internal */
 
-    function findCampaign(uint256 campaignId) internal view returns (Campaign storage c) {
+    function findCampaign(
+        uint256 campaignId
+    ) internal view returns (Campaign storage c) {
         c = campaign[campaignId];
         require(c.id > 0, "Campaign doesn't exist");
     }

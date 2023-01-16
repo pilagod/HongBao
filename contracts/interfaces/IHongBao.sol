@@ -33,7 +33,9 @@ interface IHongBao {
 
     function closeCampaign(uint256 campaignId) external;
 
-    function draw(uint256 campaignId) external returns (uint256 amount);
+    function draw(
+        uint256 campaignId
+    ) external returns (string memory name, uint256 amount);
 
     function getCampaignInfo(
         uint256 campaignId
