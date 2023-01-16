@@ -81,8 +81,7 @@ contract HongBao is IHongBao, Ownable {
     }
 
     function closeCampaign(uint256 campaignId) external override {
-        Campaign storage c = campaign[campaignId];
-        require(c.id > 0, "Campaign doesn't exist");
+        Campaign storage c = findCampaign(campaignId);
         require(c.owner == msg.sender, "Only owner can close the campaign");
         require(c.expiry <= block.timestamp, "Campaign is still in progress");
 
@@ -93,8 +92,7 @@ contract HongBao is IHongBao, Ownable {
     function draw(
         uint256 campaignId
     ) external override returns (uint256 amount) {
-        Campaign storage c = campaign[campaignId];
-        require(c.id > 0, "Campaign doesn't exist");
+        Campaign storage c = findCampaign(campaignId);
         require(c.expiry > block.timestamp, "Campaign is already expired");
         require(c.participant[msg.sender] > 0, "Not authorized to draw");
 
@@ -139,8 +137,7 @@ contract HongBao is IHongBao, Ownable {
     function getCampaignInfo(
         uint256 campaignId
     ) external view override returns (CampaignInfo memory campaignInfo) {
-        Campaign storage c = campaign[campaignId];
-        require(c.id > 0, "Campaign doesn't exist");
+        Campaign storage c = findCampaign(campaignId);
         return
             CampaignInfo({
                 id: campaignId,
@@ -155,9 +152,7 @@ contract HongBao is IHongBao, Ownable {
     function getRemainingDrawCount(
         uint256 campaignId
     ) external view override returns (uint8 remainingDrawCount) {
-        Campaign storage c = campaign[campaignId];
-        require(c.id > 0, "Campaign doesn't exist");
-
+        Campaign storage c = findCampaign(campaignId);
         return c.participant[msg.sender];
     }
 
@@ -165,5 +160,12 @@ contract HongBao is IHongBao, Ownable {
 
     function setCreateCampaignFee(uint256 amount) external onlyOwner {
         createCampaignFee = amount;
+    }
+
+    /* internal */
+
+    function findCampaign(uint256 campaignId) internal view returns (Campaign storage c) {
+        c = campaign[campaignId];
+        require(c.id > 0, "Campaign doesn't exist");
     }
 }
