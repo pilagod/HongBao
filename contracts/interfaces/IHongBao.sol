@@ -26,6 +26,7 @@ interface IHongBao {
         string calldata name,
         address token,
         uint256 expiry,
+        uint8 participantDrawCount,
         address[] calldata participants,
         Award[] calldata awards
     ) external payable returns (uint256 campaignId);

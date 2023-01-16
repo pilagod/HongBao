@@ -20,7 +20,7 @@ contract HongBao is IHongBao, Ownable {
         uint256 remainingAwardAmount;
         uint256 remainingDrawCount;
         Award[] remainingAwards;
-        mapping(address => bool) participants;
+        mapping(address => uint8) participant;
     }
 
     uint256 public createCampaignFee = 0;
@@ -32,10 +32,14 @@ contract HongBao is IHongBao, Ownable {
         string calldata name,
         address token,
         uint256 expiry,
+        uint8 participantDrawCount,
         address[] calldata participants,
         Award[] calldata awards
     ) external payable override returns (uint256 campaignId) {
-        require(msg.value >= createCampaignFee, "Fee is not enough to create campaign");
+        require(
+            msg.value >= createCampaignFee,
+            "Fee is not enough to create campaign"
+        );
         require(expiry > block.timestamp, "Campaign is already expired");
 
         uint256 totalAwardAmount = 0;
@@ -60,14 +64,17 @@ contract HongBao is IHongBao, Ownable {
         c.token = token;
         c.expiry = expiry;
         c.remainingAwardAmount = totalAwardAmount;
-        c.remainingDrawCount = totalAwardCount > participants.length
+
+        uint256 totalDrawCount = participants.length * participantDrawCount;
+        c.remainingDrawCount = totalAwardCount > totalDrawCount
             ? totalAwardCount
-            : participants.length;
+            : totalDrawCount;
+
         for (uint i = 0; i < awards.length; i++) {
             c.remainingAwards.push(awards[i]);
         }
         for (uint i = 0; i < participants.length; i++) {
-            c.participants[participants[i]] = true;
+            c.participant[participants[i]] = participantDrawCount;
         }
 
         emit CampaignCreated(campaignId);
@@ -89,9 +96,9 @@ contract HongBao is IHongBao, Ownable {
         Campaign storage c = campaign[campaignId];
         require(c.id > 0, "Campaign doesn't exist");
         require(c.expiry > block.timestamp, "Campaign is already expired");
-        require(c.participants[msg.sender], "Not authorzied to draw");
+        require(c.participant[msg.sender] > 0, "Not authorzied to draw");
 
-        c.participants[msg.sender] = false;
+        c.participant[msg.sender] -= 1;
 
         uint256 seed = (uint256(
             keccak256(
@@ -141,13 +148,13 @@ contract HongBao is IHongBao, Ownable {
                 token: c.token,
                 expiry: c.expiry,
                 remainingAwardAmount: c.remainingAwardAmount,
-                remainingAwards: c.remainingAwards 
+                remainingAwards: c.remainingAwards
             });
     }
 
     /* admin */
 
     function setCreateCampaignFee(uint256 amount) external onlyOwner {
-       createCampaignFee = amount;
+        createCampaignFee = amount;
     }
 }

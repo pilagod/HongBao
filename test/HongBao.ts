@@ -74,6 +74,7 @@ describe("HongBao", () => {
                     name: "Test",
                     token: token.address,
                     expiry: Date.now(),
+                    participantDrawCount: 0,
                     participants: [],
                     awards: [
                         {
@@ -93,6 +94,7 @@ describe("HongBao", () => {
                     name: "Test",
                     token: token.address,
                     expiry: (await time.latest()) - 1,
+                    participantDrawCount: 0,
                     participants: [],
                     awards: [],
                 })
@@ -110,6 +112,7 @@ describe("HongBao", () => {
                         name: "Test",
                         token: token.address,
                         expiry: Date.now(),
+                        participantDrawCount: 0,
                         participants: [],
                         awards: [],
                     },
@@ -128,6 +131,7 @@ describe("HongBao", () => {
                 name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
+                participantDrawCount: 0,
                 participants: [],
                 awards: [],
             })
@@ -144,6 +148,7 @@ describe("HongBao", () => {
                 name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
+                participantDrawCount: 0,
                 participants,
                 awards: [],
             })
@@ -161,6 +166,7 @@ describe("HongBao", () => {
                 name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
+                participantDrawCount: 1,
                 participants,
                 awards,
             })
@@ -182,18 +188,19 @@ describe("HongBao", () => {
     })
 
     describe("draw", () => {
-        it("should allow participant to draw only once", async () => {
+        it("should not allow participant to draw more than their draw count", async () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
                 name: "Test",
                 token: token.address,
                 expiry: Date.now(),
+                participantDrawCount: 2,
                 participants,
                 awards,
             })
 
-            await draw(campaignId, participants)
+            await draw(campaignId, participants, 2)
 
             await expect(draw(campaignId, participants)).to.be.reverted
         })
@@ -205,6 +212,7 @@ describe("HongBao", () => {
                 name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
+                participantDrawCount: 1,
                 participants,
                 awards,
             })
@@ -214,20 +222,26 @@ describe("HongBao", () => {
         })
 
         it("should be able to draw all the awards when participants is more than awards", async () => {
-            const participants = await createParticipants(10)
+            const participants = await createParticipants(5)
+            const participantDrawCount = 2
 
             const campaignId = await createCampaign(operator, {
                 name: "Test",
                 token: token.address,
                 expiry: Date.now(),
+                participantDrawCount,
                 participants,
                 awards,
             })
 
-            const result = await draw(campaignId, participants)
+            const result = await draw(
+                campaignId,
+                participants,
+                participantDrawCount,
+            )
             expect(result.count.won).to.equal(totalAwardCount)
             expect(result.count.lost).to.equal(
-                participants.length - totalAwardCount,
+                participants.length * participantDrawCount - totalAwardCount,
             )
 
             const totalDrawAmount = await getTotalDrawAmount(
@@ -238,18 +252,26 @@ describe("HongBao", () => {
         })
 
         it("should let every participant draw award when participants is less than awards", async () => {
-            const participants = await createParticipants(5)
+            const participants = await createParticipants(2)
+            const participantDrawCount = 2
 
             const campaignId = await createCampaign(operator, {
                 name: "Test",
                 token: token.address,
                 expiry: Date.now(),
+                participantDrawCount,
                 participants,
                 awards,
             })
 
-            const result = await draw(campaignId, participants)
-            expect(result.count.won).to.equal(participants.length)
+            const result = await draw(
+                campaignId,
+                participants,
+                participantDrawCount,
+            )
+            expect(result.count.won).to.equal(
+                participants.length * participantDrawCount,
+            )
             expect(result.count.lost).to.equal(0)
 
             const totalDrawAmount = await getTotalDrawAmount(
@@ -268,6 +290,7 @@ describe("HongBao", () => {
                 name: "Test",
                 token: token.address,
                 expiry: Date.now(),
+                participantDrawCount: 1,
                 participants,
                 awards,
             })
@@ -301,6 +324,7 @@ describe("HongBao", () => {
             name: string
             token: string
             expiry: number
+            participantDrawCount: number
             participants: Signer[]
             awards: IHongBao.AwardStruct[]
         },
@@ -310,6 +334,7 @@ describe("HongBao", () => {
             args.name,
             args.token,
             args.expiry,
+            args.participantDrawCount,
             args.participants.map((p) => p.getAddress()),
             args.awards,
             overrides ?? {},
@@ -343,7 +368,11 @@ describe("HongBao", () => {
         return participants
     }
 
-    async function draw(campaignId: BigNumberish, participants: Signer[]) {
+    async function draw(
+        campaignId: BigNumberish,
+        participants: Signer[],
+        round: number = 1,
+    ) {
         const result = {
             count: {
                 won: 0,
@@ -355,35 +384,37 @@ describe("HongBao", () => {
             }[],
         }
 
-        for (const p of participants) {
-            const drawTx = await hongBao.connect(p).draw(campaignId)
-            const drawReceipt = await drawTx.wait()
+        for (let i = 0; i < round; i++) {
+            for (const p of participants) {
+                const drawTx = await hongBao.connect(p).draw(campaignId)
+                const drawReceipt = await drawTx.wait()
 
-            const wonLogs = ContractUtil.parseEventLogsByName(
-                hongBao,
-                "HongBaoWon",
-                drawReceipt.logs,
-            )
-            result.count.won += wonLogs.length
-            result.logs.push(
-                ...wonLogs.map((l) => ({
-                    name: l.args.name,
-                    amount: l.args.amount,
-                })),
-            )
+                const wonLogs = ContractUtil.parseEventLogsByName(
+                    hongBao,
+                    "HongBaoWon",
+                    drawReceipt.logs,
+                )
+                result.count.won += wonLogs.length
+                result.logs.push(
+                    ...wonLogs.map((l) => ({
+                        name: l.args.name,
+                        amount: l.args.amount,
+                    })),
+                )
 
-            const lostLogs = ContractUtil.parseEventLogsByName(
-                hongBao,
-                "HongBaoLost",
-                drawReceipt.logs,
-            )
-            result.count.lost += lostLogs.length
-            result.logs.push(
-                ...lostLogs.map(() => ({
-                    name: "",
-                    amount: BigNumber.from(0),
-                })),
-            )
+                const lostLogs = ContractUtil.parseEventLogsByName(
+                    hongBao,
+                    "HongBaoLost",
+                    drawReceipt.logs,
+                )
+                result.count.lost += lostLogs.length
+                result.logs.push(
+                    ...lostLogs.map(() => ({
+                        name: "",
+                        amount: BigNumber.from(0),
+                    })),
+                )
+            }
         }
 
         return result
