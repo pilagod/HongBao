@@ -38,4 +38,8 @@ interface IHongBao {
     function getCampaignInfo(
         uint256 campaignId
     ) external view returns (CampaignInfo memory campaignInfo);
+
+    function getRemainingDrawCount(
+        uint256 campaignId
+    ) external view returns (uint8 remainingDrawCount);
 }

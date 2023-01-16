@@ -316,6 +316,47 @@ describe("HongBao", () => {
         })
     })
 
+    describe("getRemainingDrawCount", () => {
+        it("should return sender's remaining draw count", async () => {
+            const participants = await createParticipants(2)
+
+            const campaignId = await createCampaign(operator, {
+                name: "Test",
+                token: token.address,
+                expiry: Date.now(),
+                participantDrawCount: 2,
+                participants,
+                awards,
+            })
+
+            await draw(campaignId, [participants[0]])
+
+            // Participant 1 should have 1 draw count left
+            {
+                const drawCount = await hongBao
+                    .connect(participants[0])
+                    .getRemainingDrawCount(campaignId)
+                expect(drawCount).to.equal(1)
+            }
+
+            // Participant 2 should have 2 draw count left
+            {
+                const drawCount = await hongBao
+                    .connect(participants[1])
+                    .getRemainingDrawCount(campaignId)
+                expect(drawCount).to.equal(2)
+            }
+
+            // Other than participants should have no draw count
+            {
+                const drawCount = await hongBao
+                    .connect(operator)
+                    .getRemainingDrawCount(campaignId)
+                expect(drawCount).to.equal(0)
+            }
+        })
+    })
+
     /* utils */
 
     async function createCampaign(

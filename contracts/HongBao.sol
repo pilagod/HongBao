@@ -96,7 +96,7 @@ contract HongBao is IHongBao, Ownable {
         Campaign storage c = campaign[campaignId];
         require(c.id > 0, "Campaign doesn't exist");
         require(c.expiry > block.timestamp, "Campaign is already expired");
-        require(c.participant[msg.sender] > 0, "Not authorzied to draw");
+        require(c.participant[msg.sender] > 0, "Not authorized to draw");
 
         c.participant[msg.sender] -= 1;
 
@@ -150,6 +150,15 @@ contract HongBao is IHongBao, Ownable {
                 remainingAwardAmount: c.remainingAwardAmount,
                 remainingAwards: c.remainingAwards
             });
+    }
+
+    function getRemainingDrawCount(
+        uint256 campaignId
+    ) external view override returns (uint8 remainingDrawCount) {
+        Campaign storage c = campaign[campaignId];
+        require(c.id > 0, "Campaign doesn't exist");
+
+        return c.participant[msg.sender];
     }
 
     /* admin */
