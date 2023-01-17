@@ -50,14 +50,14 @@ interface IHongBao {
 
     /* Snatch Campaign */
 
-    event SnatchHongBaoWon(uint256 amount);
+    event HongBaoSnatched(uint256 amount);
 
     struct SnatchCampaignInfo {
         string name;
         address token;
         uint256 expiry;
-        uint256 minDrawAmount;
-        uint256 maxDrawAmount;
+        uint256 minSnatchAmount;
+        uint256 maxSnatchAmount;
         uint256 remainingAmount;
     }
 
@@ -66,11 +66,11 @@ interface IHongBao {
         address token,
         uint256 amount,
         uint256 expiry,
-        uint256 minDrawAmount,
-        uint256 maxDrawAmount
+        uint256 minSnatchAmount,
+        uint256 maxSnatchAmount
     ) external returns (uint256 campaignId);
 
-    function drawSnatch(uint256 campaignId) external returns (uint256 amount);
+    function snatch(uint256 campaignId) external returns (uint256 amount);
 
     function getSnatchCampaignInfo(
         uint256 campaignId

@@ -1,5 +1,11 @@
 import { expect } from "chai"
-import { BigNumber, BigNumberish, Signer, Wallet } from "ethers"
+import {
+    BigNumber,
+    BigNumberish,
+    ContractTransaction,
+    Signer,
+    Wallet,
+} from "ethers"
 import { ethers } from "hardhat"
 import { PayableOverrides } from "@ethersproject/contracts"
 import {
@@ -342,29 +348,31 @@ describe("HongBao", () => {
 
     /* Snatch Campaign */
 
-    describe.only("drawSnatch", async () => {
-        it("should be able to draw until pool has enough amount", async () => {
-            const totalAmount = ethers.utils.parseEther("100")
-            const minDrawAmount = ethers.utils.parseEther("10")
-            const maxDrawAmount = ethers.utils.parseEther("30")
+    describe("snatch", async () => {
+        it("should be able to draw when pool has enough balance", async () => {
+            const amount = ethers.utils.parseEther("100")
+            const minSnatchAmount = ethers.utils.parseEther("10")
+            const maxSnatchAmount = ethers.utils.parseEther("30")
 
             const campaignId = await createSnatchCampaign(operator, {
                 token: token.address,
-                amount: totalAmount,
-                minDrawAmount,
-                maxDrawAmount,
+                amount,
+                minSnatchAmount,
+                maxSnatchAmount,
             })
 
             const participants = await createParticipants(10)
 
-            const amounts = await drawSnatch(campaignId, participants)
-            for (const amount of amounts) {
+            await snatch(campaignId, participants)
+
+            for (const p of participants) {
+                const balance = await token.balanceOf(p.getAddress())
                 const result =
-                    amount.eq(0) ||
-                    (amount.gte(minDrawAmount) && amount.lte(maxDrawAmount))
+                    balance.eq(0) ||
+                    (balance.gte(minSnatchAmount) &&
+                        balance.lte(maxSnatchAmount))
                 expect(result).to.be.true
             }
-
             const { remainingAmount } = await hongBao.getSnatchCampaignInfo(
                 campaignId,
             )
@@ -372,7 +380,7 @@ describe("HongBao", () => {
                 token,
                 participants,
             )
-            expect(totalDrawAmount.add(remainingAmount)).to.equal(totalAmount)
+            expect(totalDrawAmount.add(remainingAmount)).to.equal(amount)
         })
     })
 
@@ -420,8 +428,8 @@ describe("HongBao", () => {
             token: string
             amount: BigNumberish
             expiry?: number
-            minDrawAmount: BigNumberish
-            maxDrawAmount: BigNumberish
+            minSnatchAmount: BigNumberish
+            maxSnatchAmount: BigNumberish
         },
         overrides?: PayableOverrides,
     ): Promise<BigNumber> {
@@ -432,8 +440,8 @@ describe("HongBao", () => {
                 args.token,
                 args.amount,
                 args.expiry || Date.now(),
-                args.minDrawAmount,
-                args.maxDrawAmount,
+                args.minSnatchAmount,
+                args.maxSnatchAmount,
                 overrides ?? {},
             )
         const createSnatchCampaignReceipt = await createSnatchCampaignTx.wait()
@@ -443,7 +451,7 @@ describe("HongBao", () => {
             },
         ] = ContractUtil.parseEventLogsByName(
             hongBao,
-            "SnatchCampaignCreated",
+            "CampaignCreated",
             createSnatchCampaignReceipt.logs,
         )
 
@@ -517,31 +525,28 @@ describe("HongBao", () => {
         return result
     }
 
-    async function drawSnatch(
-        campaignId: BigNumberish,
-        participants: Signer[],
-    ) {
+    async function snatch(campaignId: BigNumberish, participants: Signer[]) {
         const results: BigNumber[] = []
 
         for (const p of participants) {
+            let snatchTx: ContractTransaction
             try {
-                const drawSnatchTx = await hongBao
-                    .connect(p)
-                    .drawSnatch(campaignId)
-                const drawSnatchReceipt = await drawSnatchTx.wait()
-                const [
-                    {
-                        args: { amount },
-                    },
-                ] = ContractUtil.parseEventLogsByName(
-                    hongBao,
-                    "SnatchHongBaoWon",
-                    drawSnatchReceipt.logs,
-                )
-                results.push(amount)
+                snatchTx = await hongBao.connect(p).snatch(campaignId)
             } catch (e) {
                 results.push(BigNumber.from(0))
+                continue
             }
+            const snatchReceipt = await snatchTx.wait()
+            const [
+                {
+                    args: { amount },
+                },
+            ] = ContractUtil.parseEventLogsByName(
+                hongBao,
+                "HongBaoSnatched",
+                snatchReceipt.logs,
+            )
+            results.push(amount)
         }
 
         return results

@@ -160,34 +160,90 @@ contract HongBao is IHongBao, Ownable {
 
     /* Snatch Campaign */
 
+    struct SnatchCampaign {
+        uint256 id;
+        string name;
+        address owner;
+        address token;
+        uint256 expiry;
+        uint256 minSnatchAmount;
+        uint256 maxSnatchAmount;
+        uint256 remainingAmount;
+        mapping(address => SnatchParticipant) participant;
+    }
+
+    struct SnatchParticipant {
+        uint8 count;
+        bool hasDrawn;
+    }
+
+    mapping(uint256 => SnatchCampaign) private snatchCampaign;
+
     function createSnatchCampaign(
         string calldata name,
         address token,
         uint256 amount,
         uint256 expiry,
-        uint256 minDrawAmount,
-        uint256 maxDrawAmount
+        uint256 minSnatchAmount,
+        uint256 maxSnatchAmount
     ) external override returns (uint256 campaignId) {
-        return 0;
+        // TODO: check fee
+        // TODO: transfer token from owner
+        // TODO: check max > min
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
+        campaignId = ++lastCampaignId;
+
+        SnatchCampaign storage sc = snatchCampaign[campaignId];
+        sc.id = campaignId;
+        sc.name = name;
+        sc.owner = msg.sender;
+        sc.token = token;
+        sc.expiry = expiry;
+        sc.minSnatchAmount = minSnatchAmount;
+        sc.maxSnatchAmount = maxSnatchAmount;
+        sc.remainingAmount = amount;
+
+        emit CampaignCreated(campaignId);
     }
 
-    function drawSnatch(
+    function snatch(
         uint256 campaignId
     ) external override returns (uint256 amount) {
-        return 0;
+        SnatchCampaign storage sc = findSnatchCampaign(campaignId);
+
+        uint256 seed = (uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.number,
+                    block.timestamp,
+                    campaignId,
+                    sc.remainingAmount
+                )
+            )
+        ) % (sc.maxSnatchAmount - sc.minSnatchAmount + 1));
+
+        amount = sc.minSnatchAmount + seed;
+
+        sc.remainingAmount -= amount;
+
+        IERC20(sc.token).safeTransfer(msg.sender, amount);
+
+        emit HongBaoSnatched(amount);
     }
 
     function getSnatchCampaignInfo(
         uint256 campaignId
     ) external view override returns (SnatchCampaignInfo memory info) {
+        SnatchCampaign storage sc = findSnatchCampaign(campaignId);
         return
             SnatchCampaignInfo({
-                name: "",
-                token: address(0),
-                expiry: 0,
-                minDrawAmount: 0,
-                maxDrawAmount: 0,
-                remainingAmount: 0
+                name: sc.name,
+                token: sc.token,
+                expiry: sc.expiry,
+                minSnatchAmount: sc.minSnatchAmount,
+                maxSnatchAmount: sc.maxSnatchAmount,
+                remainingAmount: sc.remainingAmount
             });
     }
 
@@ -204,5 +260,12 @@ contract HongBao is IHongBao, Ownable {
     ) internal view returns (Campaign storage c) {
         c = campaign[campaignId];
         require(c.id > 0, "Campaign doesn't exist");
+    }
+
+    function findSnatchCampaign(
+        uint256 campaignId
+    ) internal view returns (SnatchCampaign storage sc) {
+        sc = snatchCampaign[campaignId];
+        require(sc.id > 0, "Campaign doesn't exist");
     }
 }
