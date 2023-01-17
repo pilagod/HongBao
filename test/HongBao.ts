@@ -340,6 +340,42 @@ describe("HongBao", () => {
         })
     })
 
+    /* Snatch Campaign */
+
+    describe.only("drawSnatch", async () => {
+        it("should be able to draw until pool has enough amount", async () => {
+            const totalAmount = ethers.utils.parseEther("100")
+            const minDrawAmount = ethers.utils.parseEther("10")
+            const maxDrawAmount = ethers.utils.parseEther("30")
+
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount: totalAmount,
+                minDrawAmount,
+                maxDrawAmount,
+            })
+
+            const participants = await createParticipants(10)
+
+            const amounts = await drawSnatch(campaignId, participants)
+            for (const amount of amounts) {
+                const result =
+                    amount.eq(0) ||
+                    (amount.gte(minDrawAmount) && amount.lte(maxDrawAmount))
+                expect(result).to.be.true
+            }
+
+            const { remainingAmount } = await hongBao.getSnatchCampaignInfo(
+                campaignId,
+            )
+            const totalDrawAmount = await getTotalDrawAmount(
+                token,
+                participants,
+            )
+            expect(totalDrawAmount.add(remainingAmount)).to.equal(totalAmount)
+        })
+    })
+
     /* utils */
 
     async function createCampaign(
@@ -372,6 +408,43 @@ describe("HongBao", () => {
             hongBao,
             "CampaignCreated",
             createCampaignReceipt.logs,
+        )
+
+        return campaignId
+    }
+
+    async function createSnatchCampaign(
+        owner: Signer,
+        args: {
+            name?: string
+            token: string
+            amount: BigNumberish
+            expiry?: number
+            minDrawAmount: BigNumberish
+            maxDrawAmount: BigNumberish
+        },
+        overrides?: PayableOverrides,
+    ): Promise<BigNumber> {
+        const createSnatchCampaignTx = await hongBao
+            .connect(owner)
+            .createSnatchCampaign(
+                args.name || "Test",
+                args.token,
+                args.amount,
+                args.expiry || Date.now(),
+                args.minDrawAmount,
+                args.maxDrawAmount,
+                overrides ?? {},
+            )
+        const createSnatchCampaignReceipt = await createSnatchCampaignTx.wait()
+        const [
+            {
+                args: { campaignId },
+            },
+        ] = ContractUtil.parseEventLogsByName(
+            hongBao,
+            "SnatchCampaignCreated",
+            createSnatchCampaignReceipt.logs,
         )
 
         return campaignId
@@ -442,6 +515,36 @@ describe("HongBao", () => {
         }
 
         return result
+    }
+
+    async function drawSnatch(
+        campaignId: BigNumberish,
+        participants: Signer[],
+    ) {
+        const results: BigNumber[] = []
+
+        for (const p of participants) {
+            try {
+                const drawSnatchTx = await hongBao
+                    .connect(p)
+                    .drawSnatch(campaignId)
+                const drawSnatchReceipt = await drawSnatchTx.wait()
+                const [
+                    {
+                        args: { amount },
+                    },
+                ] = ContractUtil.parseEventLogsByName(
+                    hongBao,
+                    "SnatchHongBaoWon",
+                    drawSnatchReceipt.logs,
+                )
+                results.push(amount)
+            } catch (e) {
+                results.push(BigNumber.from(0))
+            }
+        }
+
+        return results
     }
 
     async function getTotalDrawAmount(

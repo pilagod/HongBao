@@ -11,6 +11,11 @@ import "./interfaces/IHongBao.sol";
 contract HongBao is IHongBao, Ownable {
     using SafeERC20 for IERC20;
 
+    uint256 public createCampaignFee = 0;
+    uint256 private lastCampaignId = 0;
+
+    /* Classic Campaign */
+
     struct Campaign {
         uint256 id;
         string name;
@@ -23,9 +28,6 @@ contract HongBao is IHongBao, Ownable {
         mapping(address => uint8) participant;
     }
 
-    uint256 public createCampaignFee = 0;
-
-    uint256 private lastCampaignId = 0;
     mapping(uint256 => Campaign) private campaign;
 
     function createCampaign(
@@ -136,7 +138,7 @@ contract HongBao is IHongBao, Ownable {
 
     function getCampaignInfo(
         uint256 campaignId
-    ) external view override returns (CampaignInfo memory campaignInfo) {
+    ) external view override returns (CampaignInfo memory info) {
         Campaign storage c = findCampaign(campaignId);
         return
             CampaignInfo({
@@ -156,13 +158,46 @@ contract HongBao is IHongBao, Ownable {
         return c.participant[msg.sender];
     }
 
-    /* admin */
+    /* Snatch Campaign */
+
+    function createSnatchCampaign(
+        string calldata name,
+        address token,
+        uint256 amount,
+        uint256 expiry,
+        uint256 minDrawAmount,
+        uint256 maxDrawAmount
+    ) external override returns (uint256 campaignId) {
+        return 0;
+    }
+
+    function drawSnatch(
+        uint256 campaignId
+    ) external override returns (uint256 amount) {
+        return 0;
+    }
+
+    function getSnatchCampaignInfo(
+        uint256 campaignId
+    ) external view override returns (SnatchCampaignInfo memory info) {
+        return
+            SnatchCampaignInfo({
+                name: "",
+                token: address(0),
+                expiry: 0,
+                minDrawAmount: 0,
+                maxDrawAmount: 0,
+                remainingAmount: 0
+            });
+    }
+
+    /* Admin */
 
     function setCreateCampaignFee(uint256 amount) external onlyOwner {
         createCampaignFee = amount;
     }
 
-    /* internal */
+    /* Internal */
 
     function findCampaign(
         uint256 campaignId

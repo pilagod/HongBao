@@ -4,6 +4,9 @@ pragma abicoder v2;
 
 interface IHongBao {
     event CampaignCreated(uint256 campaignId);
+
+    /* Classic Campaign */
+
     event HongBaoWon(string name, uint256 amount);
     event HongBaoLost();
 
@@ -39,9 +42,37 @@ interface IHongBao {
 
     function getCampaignInfo(
         uint256 campaignId
-    ) external view returns (CampaignInfo memory campaignInfo);
+    ) external view returns (CampaignInfo memory info);
 
     function getRemainingDrawCount(
         uint256 campaignId
     ) external view returns (uint8 remainingDrawCount);
+
+    /* Snatch Campaign */
+
+    event SnatchHongBaoWon(uint256 amount);
+
+    struct SnatchCampaignInfo {
+        string name;
+        address token;
+        uint256 expiry;
+        uint256 minDrawAmount;
+        uint256 maxDrawAmount;
+        uint256 remainingAmount;
+    }
+
+    function createSnatchCampaign(
+        string calldata name,
+        address token,
+        uint256 amount,
+        uint256 expiry,
+        uint256 minDrawAmount,
+        uint256 maxDrawAmount
+    ) external returns (uint256 campaignId);
+
+    function drawSnatch(uint256 campaignId) external returns (uint256 amount);
+
+    function getSnatchCampaignInfo(
+        uint256 campaignId
+    ) external view returns (SnatchCampaignInfo memory info);
 }
