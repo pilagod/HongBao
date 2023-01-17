@@ -65,15 +65,15 @@ describe("HongBao", () => {
         await snapshot.restore()
     })
 
+    /* Classic Campaign */
+
     describe("createCampaign", async () => {
         it("should not allow to create campaign when owner's token balance is not enough to cover all the awards", async () => {
             const ownerBalance = await token.balanceOf(operator.getAddress())
 
             const ownerBalanceNotEnough = () =>
                 createCampaign(operator, {
-                    name: "Test",
                     token: token.address,
-                    expiry: Date.now(),
                     participantDrawCount: 0,
                     participants: [],
                     awards: [
@@ -91,7 +91,6 @@ describe("HongBao", () => {
         it("should not allow to create campaign which is already expired", async () => {
             const createExpiredCampaign = async () =>
                 createCampaign(operator, {
-                    name: "Test",
                     token: token.address,
                     expiry: (await time.latest()) - 1,
                     participantDrawCount: 0,
@@ -109,9 +108,7 @@ describe("HongBao", () => {
                 createCampaign(
                     operator,
                     {
-                        name: "Test",
                         token: token.address,
-                        expiry: Date.now(),
                         participantDrawCount: 0,
                         participants: [],
                         awards: [],
@@ -128,7 +125,6 @@ describe("HongBao", () => {
     describe("closeCampaign", () => {
         it("should not allow to close unexpired campaign", async () => {
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
                 participantDrawCount: 0,
@@ -145,7 +141,6 @@ describe("HongBao", () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
                 participantDrawCount: 0,
@@ -163,7 +158,6 @@ describe("HongBao", () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
                 participantDrawCount: 1,
@@ -192,9 +186,7 @@ describe("HongBao", () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
-                expiry: Date.now(),
                 participantDrawCount: 2,
                 participants,
                 awards,
@@ -209,7 +201,6 @@ describe("HongBao", () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
                 expiry: (await time.latest()) + 60,
                 participantDrawCount: 1,
@@ -226,9 +217,7 @@ describe("HongBao", () => {
             const participantDrawCount = 2
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
-                expiry: Date.now(),
                 participantDrawCount,
                 participants,
                 awards,
@@ -256,9 +245,7 @@ describe("HongBao", () => {
             const participantDrawCount = 2
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
-                expiry: Date.now(),
                 participantDrawCount,
                 participants,
                 awards,
@@ -287,9 +274,7 @@ describe("HongBao", () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
-                expiry: Date.now(),
                 participantDrawCount: 1,
                 participants,
                 awards,
@@ -321,9 +306,7 @@ describe("HongBao", () => {
             const participants = await createParticipants(2)
 
             const campaignId = await createCampaign(operator, {
-                name: "Test",
                 token: token.address,
-                expiry: Date.now(),
                 participantDrawCount: 2,
                 participants,
                 awards,
@@ -362,9 +345,9 @@ describe("HongBao", () => {
     async function createCampaign(
         owner: Signer,
         args: {
-            name: string
+            name?: string
             token: string
-            expiry: number
+            expiry?: number
             participantDrawCount: number
             participants: Signer[]
             awards: IHongBao.AwardStruct[]
@@ -372,9 +355,9 @@ describe("HongBao", () => {
         overrides?: PayableOverrides,
     ): Promise<BigNumber> {
         const createCampaignTx = await hongBao.connect(owner).createCampaign(
-            args.name,
+            args.name || "Test",
             args.token,
-            args.expiry,
+            args.expiry || Date.now(),
             args.participantDrawCount,
             args.participants.map((p) => p.getAddress()),
             args.awards,
