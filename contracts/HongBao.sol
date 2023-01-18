@@ -174,7 +174,7 @@ contract HongBao is IHongBao, Ownable {
 
     struct SnatchParticipant {
         uint8 count;
-        bool hasDrawn;
+        bool hasSnatched;
     }
 
     mapping(uint256 => SnatchCampaign) private snatchCampaign;
@@ -211,6 +211,14 @@ contract HongBao is IHongBao, Ownable {
         uint256 campaignId
     ) external override returns (uint256 amount) {
         SnatchCampaign storage sc = findSnatchCampaign(campaignId);
+        require(sc.remainingAmount >= sc.minSnatchAmount, "Campaign balance is not enough");
+
+        SnatchParticipant storage sp = sc.participant[msg.sender];
+        require(!sp.hasSnatched || sp.count > 0, "Not authorized to snatch");
+        if (!sp.hasSnatched) {
+            sp.count = 1;
+            sp.hasSnatched = true;
+        }
 
         uint256 seed = (uint256(
             keccak256(
@@ -224,8 +232,11 @@ contract HongBao is IHongBao, Ownable {
         ) % (sc.maxSnatchAmount - sc.minSnatchAmount + 1));
 
         amount = sc.minSnatchAmount + seed;
-
+        if (amount > sc.remainingAmount) {
+            amount = sc.remainingAmount;
+        }
         sc.remainingAmount -= amount;
+        sp.count -= 1;
 
         IERC20(sc.token).safeTransfer(msg.sender, amount);
 

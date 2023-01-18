@@ -188,7 +188,7 @@ describe("HongBao", () => {
     })
 
     describe("draw", () => {
-        it("should not allow participant to draw more than their draw count", async () => {
+        it("should not allow participant to draw more than his limit", async () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
@@ -239,10 +239,7 @@ describe("HongBao", () => {
                 participants.length * participantDrawCount - totalAwardCount,
             )
 
-            const totalDrawAmount = await getTotalDrawAmount(
-                token,
-                participants,
-            )
+            const totalDrawAmount = await getTotalBalance(token, participants)
             expect(totalDrawAmount).to.equal(totalAwardAmount)
         })
 
@@ -267,10 +264,7 @@ describe("HongBao", () => {
             )
             expect(result.count.lost).to.equal(0)
 
-            const totalDrawAmount = await getTotalDrawAmount(
-                token,
-                participants,
-            )
+            const totalDrawAmount = await getTotalBalance(token, participants)
             expect(totalDrawAmount).to.be.lt(totalAwardAmount)
         })
     })
@@ -349,10 +343,57 @@ describe("HongBao", () => {
     /* Snatch Campaign */
 
     describe("snatch", async () => {
-        it("should be able to draw when pool has enough balance", async () => {
-            const amount = ethers.utils.parseEther("100")
+        it("should not be able to snatch when campaign balance is less than min snatch amount", async () => {
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount: ethers.utils.parseEther("1"),
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("20"),
+            })
+            const participants = await createParticipants(1)
+
+            const snatchWhenBalanceNotEnough = () =>
+                snatch(campaignId, participants)
+
+            await expect(snatchWhenBalanceNotEnough()).to.be.reverted
+        })
+
+        it("should not allow participant to snatch more than his limit", async () => {
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount: ethers.utils.parseEther("200"),
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("20"),
+            })
+
+            const participants = await createParticipants(1)
+
+            await snatch(campaignId, participants)
+
+            await expect(snatch(campaignId, participants)).to.be.reverted
+        })
+
+        it("should snatch remaining amount when snatch amount is more than campaign remaining balance", async () => {
+            const amount = ethers.utils.parseEther("10")
+
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount,
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("20"),
+            })
+            const participants = await createParticipants(1)
+
+            await snatch(campaignId, participants)
+
+            const totalSnatchAmount = await getTotalBalance(token, participants)
+            expect(totalSnatchAmount).to.equal(amount)
+        })
+
+        it("should be able to snatch when campaign has enough balance", async () => {
+            const amount = ethers.utils.parseEther("200")
             const minSnatchAmount = ethers.utils.parseEther("10")
-            const maxSnatchAmount = ethers.utils.parseEther("30")
+            const maxSnatchAmount = ethers.utils.parseEther("20")
 
             const campaignId = await createSnatchCampaign(operator, {
                 token: token.address,
@@ -360,7 +401,6 @@ describe("HongBao", () => {
                 minSnatchAmount,
                 maxSnatchAmount,
             })
-
             const participants = await createParticipants(10)
 
             await snatch(campaignId, participants)
@@ -376,11 +416,8 @@ describe("HongBao", () => {
             const { remainingAmount } = await hongBao.getSnatchCampaignInfo(
                 campaignId,
             )
-            const totalDrawAmount = await getTotalDrawAmount(
-                token,
-                participants,
-            )
-            expect(totalDrawAmount.add(remainingAmount)).to.equal(amount)
+            const totalSnatchAmount = await getTotalBalance(token, participants)
+            expect(totalSnatchAmount.add(remainingAmount)).to.equal(amount)
         })
     })
 
@@ -529,13 +566,14 @@ describe("HongBao", () => {
         const results: BigNumber[] = []
 
         for (const p of participants) {
-            let snatchTx: ContractTransaction
-            try {
-                snatchTx = await hongBao.connect(p).snatch(campaignId)
-            } catch (e) {
-                results.push(BigNumber.from(0))
-                continue
-            }
+            // let snatchTx: ContractTransaction
+            // try {
+            //     snatchTx = await hongBao.connect(p).snatch(campaignId)
+            // } catch (e) {
+            //     results.push(BigNumber.from(0))
+            //     continue
+            // }
+            const snatchTx = await hongBao.connect(p).snatch(campaignId)
             const snatchReceipt = await snatchTx.wait()
             const [
                 {
@@ -552,7 +590,7 @@ describe("HongBao", () => {
         return results
     }
 
-    async function getTotalDrawAmount(
+    async function getTotalBalance(
         token: IERC20,
         participants: Signer[],
     ): Promise<BigNumber> {
