@@ -475,6 +475,25 @@ describe("HongBao", () => {
             const totalSnatchAmount = await getTotalBalance(token, participants)
             expect(totalSnatchAmount.add(remainingAmount)).to.equal(amount)
         })
+
+        it("should allow to snatch when min and max amount are same", async () => {
+            const amount = ethers.utils.parseEther("100")
+            const minSnatchAmount = ethers.utils.parseEther("10")
+            const maxSnatchAmount = ethers.utils.parseEther("10")
+
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount,
+                minSnatchAmount,
+                maxSnatchAmount,
+            })
+            const participants = await createParticipants(10)
+
+            await snatch(campaignId, participants)
+
+            const totalSnatchAmount = await getTotalBalance(token, participants)
+            expect(totalSnatchAmount).to.equal(amount)
+        })
     })
 
     /* utils */
