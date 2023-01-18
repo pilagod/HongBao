@@ -71,6 +71,8 @@ interface IHongBao {
         uint256 maxSnatchAmount
     ) external payable returns (uint256 campaignId);
 
+    function closeSnatchCampaign(uint256 campaignId) external;
+
     function snatch(uint256 campaignId) external returns (uint256 amount);
 
     function getSnatchCampaignInfo(

@@ -214,11 +214,23 @@ contract HongBao is IHongBao, Ownable {
         emit CampaignCreated(campaignId);
     }
 
+    function closeSnatchCampaign(uint256 campaignId) external override {
+        SnatchCampaign storage sc = findSnatchCampaign(campaignId);
+        require(sc.owner == msg.sender, "Only owner can close the campaign");
+        require(sc.expiry < block.timestamp, "Campaign is still in progress");
+
+        IERC20(sc.token).safeTransfer(sc.owner, sc.remainingAmount);
+        delete snatchCampaign[campaignId];
+    }
+
     function snatch(
         uint256 campaignId
     ) external override returns (uint256 amount) {
         SnatchCampaign storage sc = findSnatchCampaign(campaignId);
-        require(sc.remainingAmount >= sc.minSnatchAmount, "Campaign balance is not enough");
+        require(
+            sc.remainingAmount >= sc.minSnatchAmount,
+            "Campaign balance is not enough"
+        );
 
         SnatchParticipant storage sp = sc.participant[msg.sender];
         require(!sp.hasSnatched || sp.count > 0, "Not authorized to snatch");

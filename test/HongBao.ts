@@ -126,20 +126,7 @@ describe("HongBao", () => {
     })
 
     describe("closeCampaign", () => {
-        it("should not allow to close unexpired campaign", async () => {
-            const campaignId = await createCampaign(operator, {
-                token: token.address,
-                expiry: (await time.latest()) + 60,
-                participants: [],
-                awards: [],
-            })
-
-            const tx = hongBao.connect(operator).closeCampaign(campaignId)
-
-            await expect(tx).to.be.reverted
-        })
-
-        it("should not allow other than owner to close the campaign", async () => {
+        it("should not allow other one than owner to close the campaign", async () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
@@ -150,12 +137,25 @@ describe("HongBao", () => {
             })
             await time.increase(600)
 
-            await expect(
-                hongBao.connect(participants[0]).closeCampaign(campaignId),
-            ).to.be.reverted
+            const tx = hongBao
+                .connect(participants[0])
+                .closeCampaign(campaignId)
+            await expect(tx).to.be.reverted
         })
 
-        it("should collect remaining amount back and delete the campaign", async () => {
+        it("should not allow to close unexpired campaign", async () => {
+            const campaignId = await createCampaign(operator, {
+                token: token.address,
+                expiry: (await time.latest()) + 60,
+                participants: [],
+                awards: [],
+            })
+
+            const tx = hongBao.connect(operator).closeCampaign(campaignId)
+            await expect(tx).to.be.reverted
+        })
+
+        it("should collect remaining amount back to owner and delete the campaign", async () => {
             const participants = await createParticipants(1)
 
             const campaignId = await createCampaign(operator, {
@@ -392,6 +392,64 @@ describe("HongBao", () => {
                 })
 
             await expect(createInvalidSnatchAmountCampaign()).to.be.reverted
+        })
+    })
+
+    describe("closeSnatchCampaign", () => {
+        it("should not allow other one than owner to close campaign", async () => {
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount: ethers.utils.parseEther("100"),
+                expiry: (await time.latest()) + 60,
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("20"),
+            })
+            const participants = await createParticipants(1)
+
+            await time.increase(600)
+
+            const tx = hongBao
+                .connect(participants[0])
+                .closeSnatchCampaign(campaignId)
+            await expect(tx).to.be.reverted
+        })
+
+        it("should not allow to close unexpired campaign", async () => {
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount: ethers.utils.parseEther("100"),
+                expiry: (await time.latest()) + 60,
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("20"),
+            })
+
+            const tx = hongBao.connect(operator).closeSnatchCampaign(campaignId)
+            expect(tx).to.be.reverted
+        })
+
+        it("should collect remaining amount back to owner and delete the campaign", async () => {
+            const amount = ethers.utils.parseEther("100")
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount,
+                expiry: (await time.latest()) + 60,
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("20"),
+            })
+            const participants = await createParticipants(1)
+
+            const [snatchAmount] = await snatch(campaignId, participants)
+            await time.increase(600)
+
+            const balanceBefore = await token.balanceOf(operator.getAddress())
+            await hongBao.connect(operator).closeSnatchCampaign(campaignId)
+            const balanceAfter = await token.balanceOf(operator.getAddress())
+
+            expect(balanceAfter.sub(balanceBefore).add(snatchAmount)).to.equal(
+                amount,
+            )
+            await expect(hongBao.getSnatchCampaignInfo(campaignId)).to.be
+                .reverted
         })
     })
 
