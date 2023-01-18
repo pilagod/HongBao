@@ -66,6 +66,7 @@ interface IHongBao {
         address token,
         uint256 amount,
         uint256 expiry,
+        uint8 snatchCount,
         uint256 minSnatchAmount,
         uint256 maxSnatchAmount
     ) external returns (uint256 campaignId);

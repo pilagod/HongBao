@@ -166,6 +166,7 @@ contract HongBao is IHongBao, Ownable {
         address owner;
         address token;
         uint256 expiry;
+        uint8 snatchCount;
         uint256 minSnatchAmount;
         uint256 maxSnatchAmount;
         uint256 remainingAmount;
@@ -184,6 +185,7 @@ contract HongBao is IHongBao, Ownable {
         address token,
         uint256 amount,
         uint256 expiry,
+        uint8 snatchCount,
         uint256 minSnatchAmount,
         uint256 maxSnatchAmount
     ) external override returns (uint256 campaignId) {
@@ -200,6 +202,7 @@ contract HongBao is IHongBao, Ownable {
         sc.owner = msg.sender;
         sc.token = token;
         sc.expiry = expiry;
+        sc.snatchCount = snatchCount;
         sc.minSnatchAmount = minSnatchAmount;
         sc.maxSnatchAmount = maxSnatchAmount;
         sc.remainingAmount = amount;
@@ -216,7 +219,7 @@ contract HongBao is IHongBao, Ownable {
         SnatchParticipant storage sp = sc.participant[msg.sender];
         require(!sp.hasSnatched || sp.count > 0, "Not authorized to snatch");
         if (!sp.hasSnatched) {
-            sp.count = 1;
+            sp.count = sc.snatchCount;
             sp.hasSnatched = true;
         }
 

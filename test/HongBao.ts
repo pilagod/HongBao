@@ -359,16 +359,19 @@ describe("HongBao", () => {
         })
 
         it("should not allow participant to snatch more than his limit", async () => {
+            const snatchCount = 2
+
             const campaignId = await createSnatchCampaign(operator, {
                 token: token.address,
                 amount: ethers.utils.parseEther("200"),
+                snatchCount,
                 minSnatchAmount: ethers.utils.parseEther("10"),
                 maxSnatchAmount: ethers.utils.parseEther("20"),
             })
 
             const participants = await createParticipants(1)
 
-            await snatch(campaignId, participants)
+            await snatch(campaignId, participants, 2)
 
             await expect(snatch(campaignId, participants)).to.be.reverted
         })
@@ -436,9 +439,9 @@ describe("HongBao", () => {
         overrides?: PayableOverrides,
     ): Promise<BigNumber> {
         const createCampaignTx = await hongBao.connect(owner).createCampaign(
-            args.name || "Test",
+            args.name ?? "Test",
             args.token,
-            args.expiry || Date.now(),
+            args.expiry ?? Date.now(),
             args.participantDrawCount,
             args.participants.map((p) => p.getAddress()),
             args.awards,
@@ -465,6 +468,7 @@ describe("HongBao", () => {
             token: string
             amount: BigNumberish
             expiry?: number
+            snatchCount?: number
             minSnatchAmount: BigNumberish
             maxSnatchAmount: BigNumberish
         },
@@ -473,10 +477,11 @@ describe("HongBao", () => {
         const createSnatchCampaignTx = await hongBao
             .connect(owner)
             .createSnatchCampaign(
-                args.name || "Test",
+                args.name ?? "Test",
                 args.token,
                 args.amount,
-                args.expiry || Date.now(),
+                args.expiry ?? Date.now(),
+                args.snatchCount ?? 1,
                 args.minSnatchAmount,
                 args.maxSnatchAmount,
                 overrides ?? {},
@@ -562,29 +567,28 @@ describe("HongBao", () => {
         return result
     }
 
-    async function snatch(campaignId: BigNumberish, participants: Signer[]) {
+    async function snatch(
+        campaignId: BigNumberish,
+        participants: Signer[],
+        round: number = 1,
+    ) {
         const results: BigNumber[] = []
 
-        for (const p of participants) {
-            // let snatchTx: ContractTransaction
-            // try {
-            //     snatchTx = await hongBao.connect(p).snatch(campaignId)
-            // } catch (e) {
-            //     results.push(BigNumber.from(0))
-            //     continue
-            // }
-            const snatchTx = await hongBao.connect(p).snatch(campaignId)
-            const snatchReceipt = await snatchTx.wait()
-            const [
-                {
-                    args: { amount },
-                },
-            ] = ContractUtil.parseEventLogsByName(
-                hongBao,
-                "HongBaoSnatched",
-                snatchReceipt.logs,
-            )
-            results.push(amount)
+        for (let i = 0; i < round; i++) {
+            for (const p of participants) {
+                const snatchTx = await hongBao.connect(p).snatch(campaignId)
+                const snatchReceipt = await snatchTx.wait()
+                const [
+                    {
+                        args: { amount },
+                    },
+                ] = ContractUtil.parseEventLogsByName(
+                    hongBao,
+                    "HongBaoSnatched",
+                    snatchReceipt.logs,
+                )
+                results.push(amount)
+            }
         }
 
         return results
