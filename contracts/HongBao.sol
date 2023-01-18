@@ -188,10 +188,14 @@ contract HongBao is IHongBao, Ownable {
         uint8 snatchCount,
         uint256 minSnatchAmount,
         uint256 maxSnatchAmount
-    ) external override returns (uint256 campaignId) {
-        // TODO: check fee
-        // TODO: transfer token from owner
-        // TODO: check max > min
+    ) external payable override returns (uint256 campaignId) {
+        require(
+            msg.value >= createCampaignFee,
+            "Fee is not enough to create campaign"
+        );
+        require(expiry > block.timestamp, "Campaign is already expired");
+        require(maxSnatchAmount >= minSnatchAmount, "Snatch amount is invalid");
+
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
         campaignId = ++lastCampaignId;

@@ -74,13 +74,31 @@ describe("HongBao", () => {
     /* Classic Campaign */
 
     describe("createCampaign", async () => {
+        it("should not allow to create campaign when fee is not enough", async () => {
+            await hongBao.setCreateCampaignFee(ethers.utils.parseEther("100"))
+
+            const createWithFeeNotEnough = () =>
+                createCampaign(
+                    operator,
+                    {
+                        token: token.address,
+                        participants: [],
+                        awards: [],
+                    },
+                    {
+                        value: ethers.utils.parseEther("1"),
+                    },
+                )
+
+            await expect(createWithFeeNotEnough()).to.be.reverted
+        })
+
         it("should not allow to create campaign when owner's token balance is not enough to cover all the awards", async () => {
             const ownerBalance = await token.balanceOf(operator.getAddress())
 
             const ownerBalanceNotEnough = () =>
                 createCampaign(operator, {
                     token: token.address,
-                    participantDrawCount: 0,
                     participants: [],
                     awards: [
                         {
@@ -94,37 +112,16 @@ describe("HongBao", () => {
             await expect(ownerBalanceNotEnough()).to.be.reverted
         })
 
-        it("should not allow to create campaign which is already expired", async () => {
+        it("should not allow to create expired campaign", async () => {
             const createExpiredCampaign = async () =>
                 createCampaign(operator, {
                     token: token.address,
                     expiry: (await time.latest()) - 1,
-                    participantDrawCount: 0,
                     participants: [],
                     awards: [],
                 })
 
             await expect(createExpiredCampaign()).to.be.reverted
-        })
-
-        it("should not allow to create campaign when fee is not enough", async () => {
-            await hongBao.setCreateCampaignFee(ethers.utils.parseEther("100"))
-
-            const createCampaignFeeNotEnough = () =>
-                createCampaign(
-                    operator,
-                    {
-                        token: token.address,
-                        participantDrawCount: 0,
-                        participants: [],
-                        awards: [],
-                    },
-                    {
-                        value: ethers.utils.parseEther("1"),
-                    },
-                )
-
-            await expect(createCampaignFeeNotEnough()).to.be.reverted
         })
     })
 
@@ -133,7 +130,6 @@ describe("HongBao", () => {
             const campaignId = await createCampaign(operator, {
                 token: token.address,
                 expiry: (await time.latest()) + 60,
-                participantDrawCount: 0,
                 participants: [],
                 awards: [],
             })
@@ -149,7 +145,6 @@ describe("HongBao", () => {
             const campaignId = await createCampaign(operator, {
                 token: token.address,
                 expiry: (await time.latest()) + 60,
-                participantDrawCount: 0,
                 participants,
                 awards: [],
             })
@@ -166,7 +161,6 @@ describe("HongBao", () => {
             const campaignId = await createCampaign(operator, {
                 token: token.address,
                 expiry: (await time.latest()) + 60,
-                participantDrawCount: 1,
                 participants,
                 awards,
             })
@@ -209,7 +203,6 @@ describe("HongBao", () => {
             const campaignId = await createCampaign(operator, {
                 token: token.address,
                 expiry: (await time.latest()) + 60,
-                participantDrawCount: 1,
                 participants,
                 awards,
             })
@@ -275,7 +268,6 @@ describe("HongBao", () => {
 
             const campaignId = await createCampaign(operator, {
                 token: token.address,
-                participantDrawCount: 1,
                 participants,
                 awards,
             })
@@ -342,7 +334,68 @@ describe("HongBao", () => {
 
     /* Snatch Campaign */
 
-    describe("snatch", async () => {
+    describe("createSnatchCampaign", () => {
+        it("should not allow to create campaign when fee is not enough", async () => {
+            await hongBao.setCreateCampaignFee(ethers.utils.parseEther("100"))
+
+            const createWithFeeNotEnough = () =>
+                createSnatchCampaign(
+                    operator,
+                    {
+                        token: token.address,
+                        amount: ethers.utils.parseEther("200"),
+                        minSnatchAmount: ethers.utils.parseEther("10"),
+                        maxSnatchAmount: ethers.utils.parseEther("20"),
+                    },
+                    {
+                        value: ethers.utils.parseEther("1"),
+                    },
+                )
+
+            await expect(createWithFeeNotEnough()).to.be.reverted
+        })
+
+        it("should not allow to create campaign when owner's token balance is not enough", async () => {
+            const ownerBalance = await token.balanceOf(operator.getAddress())
+
+            const createWithBalanceNotEnough = () =>
+                createSnatchCampaign(operator, {
+                    token: token.address,
+                    amount: ownerBalance.add(1),
+                    minSnatchAmount: ethers.utils.parseEther("10"),
+                    maxSnatchAmount: ethers.utils.parseEther("20"),
+                })
+
+            await expect(createWithBalanceNotEnough()).to.be.reverted
+        })
+
+        it("should not allow to create expired campaign", async () => {
+            const createExpiredCampaign = async () =>
+                createSnatchCampaign(operator, {
+                    token: token.address,
+                    amount: ethers.utils.parseEther("200"),
+                    expiry: (await time.latest()) - 60,
+                    minSnatchAmount: ethers.utils.parseEther("10"),
+                    maxSnatchAmount: ethers.utils.parseEther("20"),
+                })
+
+            await expect(createExpiredCampaign()).to.be.reverted
+        })
+
+        it("should ensure min snatch amount to be less than max snatch amount", async () => {
+            const createInvalidSnatchAmountCampaign = async () =>
+                createSnatchCampaign(operator, {
+                    token: token.address,
+                    amount: ethers.utils.parseEther("200"),
+                    minSnatchAmount: ethers.utils.parseEther("10"),
+                    maxSnatchAmount: ethers.utils.parseEther("5"),
+                })
+
+            await expect(createInvalidSnatchAmountCampaign()).to.be.reverted
+        })
+    })
+
+    describe("snatch", () => {
         it("should not be able to snatch when campaign balance is less than min snatch amount", async () => {
             const campaignId = await createSnatchCampaign(operator, {
                 token: token.address,
@@ -432,7 +485,7 @@ describe("HongBao", () => {
             name?: string
             token: string
             expiry?: number
-            participantDrawCount: number
+            participantDrawCount?: number
             participants: Signer[]
             awards: IHongBao.AwardStruct[]
         },
@@ -442,7 +495,7 @@ describe("HongBao", () => {
             args.name ?? "Test",
             args.token,
             args.expiry ?? Date.now(),
-            args.participantDrawCount,
+            args.participantDrawCount ?? 1,
             args.participants.map((p) => p.getAddress()),
             args.awards,
             overrides ?? {},
