@@ -14,6 +14,16 @@ contract HongBao is IHongBao, Ownable {
     uint256 public createCampaignFee = 0;
     uint256 private lastCampaignId = 0;
 
+    function getCampaignType(uint256 campaignId) external view override returns (CampaignType) {
+        if (campaign[campaignId].id > 0) {
+            return CampaignType.Classic;
+        }
+        if (snatchCampaign[campaignId].id > 0) {
+            return CampaignType.Snatch;
+        }
+        revert("Campaign doesn't exist");
+    }
+
     /* Classic Campaign */
 
     struct Campaign {

@@ -5,6 +5,13 @@ pragma abicoder v2;
 interface IHongBao {
     event CampaignCreated(uint256 campaignId);
 
+    enum CampaignType {
+        Classic,
+        Snatch
+    }
+
+    function getCampaignType(uint256 campaignId) external view returns (CampaignType);
+
     /* Classic Campaign */
 
     event HongBaoWon(string name, uint256 amount);

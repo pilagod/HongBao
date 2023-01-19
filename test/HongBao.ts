@@ -42,6 +42,37 @@ describe("HongBao", () => {
         await snapshot.restore()
     })
 
+    describe("getCampaignType", () => {
+        it("should revert when campaign doesn't exist", async () => {
+            await expect(hongBao.getCampaignType(123)).to.be.reverted
+        })
+
+        it("should be able to distinguish classic campaign", async () => {
+            const campaignId = await createCampaign(operator, {
+                token: token.address,
+                participants: [],
+                awards: [],
+            })
+
+            const campaignType = await hongBao.getCampaignType(campaignId)
+
+            expect(campaignType).to.equal(0)
+        })
+
+        it("should be able to distinguish snatch campaign", async () => {
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount: ethers.utils.parseEther("200"),
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("20"),
+            })
+
+            const campaignType = await hongBao.getCampaignType(campaignId)
+
+            expect(campaignType).to.equal(1)
+        })
+    })
+
     /* Classic Campaign */
 
     const awards = [
@@ -393,7 +424,7 @@ describe("HongBao", () => {
         it("should allow only owner to close campaign", async () => {
             const campaignId = await createSnatchCampaign(operator, {
                 token: token.address,
-                amount: ethers.utils.parseEther("100"),
+                amount: ethers.utils.parseEther("200"),
                 expiry: (await time.latest()) + 60,
                 minSnatchAmount: ethers.utils.parseEther("10"),
                 maxSnatchAmount: ethers.utils.parseEther("20"),
@@ -411,7 +442,7 @@ describe("HongBao", () => {
         it("should not allow to close unexpired campaign", async () => {
             const campaignId = await createSnatchCampaign(operator, {
                 token: token.address,
-                amount: ethers.utils.parseEther("100"),
+                amount: ethers.utils.parseEther("200"),
                 expiry: (await time.latest()) + 60,
                 minSnatchAmount: ethers.utils.parseEther("10"),
                 maxSnatchAmount: ethers.utils.parseEther("20"),
@@ -422,7 +453,8 @@ describe("HongBao", () => {
         })
 
         it("should collect remaining amount back to owner and delete the campaign", async () => {
-            const amount = ethers.utils.parseEther("100")
+            const amount = ethers.utils.parseEther("200")
+
             const campaignId = await createSnatchCampaign(operator, {
                 token: token.address,
                 amount,
