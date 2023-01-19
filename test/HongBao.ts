@@ -199,7 +199,16 @@ describe("HongBao", () => {
             await time.increase(600)
 
             const balanceBefore = await token.balanceOf(operator.getAddress())
-            await hongBao.connect(operator).closeCampaign(campaignId)
+
+            const tx = await hongBao.connect(operator).closeCampaign(campaignId)
+            const receipt = await tx.wait()
+            const [{ args }] = ContractUtil.parseEventLogsByName(
+                hongBao,
+                "CampaignClosed",
+                receipt.logs,
+            )
+            expect(args.campaignId).to.equal(campaignId)
+
             const balanceAfter = await token.balanceOf(operator.getAddress())
 
             expect(balanceAfter.sub(balanceBefore)).to.equal(
@@ -471,7 +480,18 @@ describe("HongBao", () => {
             await time.increase(600)
 
             const balanceBefore = await token.balanceOf(operator.getAddress())
-            await hongBao.connect(operator).closeSnatchCampaign(campaignId)
+
+            const tx = await hongBao
+                .connect(operator)
+                .closeSnatchCampaign(campaignId)
+            const receipt = await tx.wait()
+            const [{ args }] = ContractUtil.parseEventLogsByName(
+                hongBao,
+                "CampaignClosed",
+                receipt.logs,
+            )
+            expect(args.campaignId).to.equal(campaignId)
+
             const balanceAfter = await token.balanceOf(operator.getAddress())
 
             expect(balanceAfter.sub(balanceBefore).add(snatchAmount)).to.equal(

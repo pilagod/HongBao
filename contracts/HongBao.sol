@@ -121,6 +121,8 @@ contract HongBao is IHongBao, Ownable {
 
         IERC20(c.token).safeTransfer(msg.sender, c.remainingAwardAmount);
         delete campaign[campaignId];
+
+        emit CampaignClosed(campaignId);
     }
 
     function draw(
@@ -247,6 +249,8 @@ contract HongBao is IHongBao, Ownable {
 
         IERC20(sc.token).safeTransfer(sc.owner, sc.remainingAmount);
         delete snatchCampaign[campaignId];
+
+        emit CampaignClosed(campaignId);
     }
 
     function refillSnatchCampaign(uint256 campaignId, uint256 amount) external override {

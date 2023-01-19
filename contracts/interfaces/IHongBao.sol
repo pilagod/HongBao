@@ -3,6 +3,7 @@ pragma solidity >=0.7.0;
 pragma abicoder v2;
 
 interface IHongBao {
+    event CampaignClosed(uint256 campaignId);
     event CampaignCreated(uint256 campaignId);
     event CampaignRefilled(uint256 campaignId, uint256 amount);
 
