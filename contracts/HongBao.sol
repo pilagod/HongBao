@@ -279,6 +279,14 @@ contract HongBao is IHongBao, Ownable {
 
     /* Admin */
 
+    event FeeCollected(address recipient, uint256 amount);
+
+    function collectFee(address recipient) external onlyOwner {
+        uint256 amount = address(this).balance;
+        payable(recipient).transfer(amount);
+        emit FeeCollected(recipient, amount);
+    }
+
     function setCreateCampaignFee(uint256 amount) external onlyOwner {
         createCampaignFee = amount;
     }
