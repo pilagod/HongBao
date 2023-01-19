@@ -14,7 +14,9 @@ contract HongBao is IHongBao, Ownable {
     uint256 public createCampaignFee = 0;
     uint256 private lastCampaignId = 0;
 
-    function getCampaignType(uint256 campaignId) external view override returns (CampaignType) {
+    function getCampaignType(
+        uint256 campaignId
+    ) external view override returns (CampaignType) {
         if (campaign[campaignId].id > 0) {
             return CampaignType.Classic;
         }
@@ -170,7 +172,6 @@ contract HongBao is IHongBao, Ownable {
         return (award.name, award.amount);
     }
 
-
     /* Snatch Campaign */
 
     struct SnatchCampaign {
@@ -253,7 +254,10 @@ contract HongBao is IHongBao, Ownable {
         emit CampaignClosed(campaignId);
     }
 
-    function refillSnatchCampaign(uint256 campaignId, uint256 amount) external override {
+    function refillSnatchCampaign(
+        uint256 campaignId,
+        uint256 amount
+    ) external override {
         SnatchCampaign storage sc = findSnatchCampaign(campaignId);
         require(sc.owner == msg.sender, "Only owner can refill the campaign");
 

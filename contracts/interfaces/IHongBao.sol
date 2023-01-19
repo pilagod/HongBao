@@ -12,7 +12,9 @@ interface IHongBao {
         Snatch
     }
 
-    function getCampaignType(uint256 campaignId) external view returns (CampaignType);
+    function getCampaignType(
+        uint256 campaignId
+    ) external view returns (CampaignType);
 
     /* Classic Campaign */
 
@@ -89,5 +91,4 @@ interface IHongBao {
     function refillSnatchCampaign(uint256 campaignId, uint256 amount) external;
 
     function snatch(uint256 campaignId) external returns (uint256 amount);
-
 }

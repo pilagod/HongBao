@@ -15,6 +15,11 @@ const accounts = [process.env.OPERATOR_PRIVATE_KEY]
 
 module.exports = {
     networks: {
+        arbitrumGoerli: {
+            chainId: 421613,
+            url: "https://goerli-rollup.arbitrum.io/rpc",
+            accounts,
+        },
         polygon: {
             chainId: 137,
             url: "https://polygon-rpc.com/",
@@ -43,6 +48,8 @@ module.exports = {
     },
     etherscan: {
         apiKey: {
+            arbitrumOne: process.env.ARBISCAN_API_KEY,
+            arbitrumGoerli: process.env.ARBISCAN_API_KEY,
             polygon: process.env.POLYGONSCAN_API_KEY,
             polygonMumbai: process.env.POLYGONSCAN_API_KEY,
         },
