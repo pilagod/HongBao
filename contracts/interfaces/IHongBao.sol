@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 interface IHongBao {
     event CampaignCreated(uint256 campaignId);
+    event CampaignRefilled(uint256 campaignId, uint256 amount);
 
     enum CampaignType {
         Classic,
@@ -32,6 +33,14 @@ interface IHongBao {
         Award[] remainingAwards;
     }
 
+    function getCampaignInfo(
+        uint256 campaignId
+    ) external view returns (CampaignInfo memory info);
+
+    function getRemainingDrawCount(
+        uint256 campaignId
+    ) external view returns (uint8 remainingDrawCount);
+
     function createCampaign(
         string calldata name,
         address token,
@@ -47,14 +56,6 @@ interface IHongBao {
         uint256 campaignId
     ) external returns (string memory name, uint256 amount);
 
-    function getCampaignInfo(
-        uint256 campaignId
-    ) external view returns (CampaignInfo memory info);
-
-    function getRemainingDrawCount(
-        uint256 campaignId
-    ) external view returns (uint8 remainingDrawCount);
-
     /* Snatch Campaign */
 
     event HongBaoSnatched(uint256 amount);
@@ -68,6 +69,10 @@ interface IHongBao {
         uint256 remainingAmount;
     }
 
+    function getSnatchCampaignInfo(
+        uint256 campaignId
+    ) external view returns (SnatchCampaignInfo memory info);
+
     function createSnatchCampaign(
         string calldata name,
         address token,
@@ -80,9 +85,8 @@ interface IHongBao {
 
     function closeSnatchCampaign(uint256 campaignId) external;
 
+    function refillSnatchCampaign(uint256 campaignId, uint256 amount) external;
+
     function snatch(uint256 campaignId) external returns (uint256 amount);
 
-    function getSnatchCampaignInfo(
-        uint256 campaignId
-    ) external view returns (SnatchCampaignInfo memory info);
 }

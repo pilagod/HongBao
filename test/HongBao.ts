@@ -15,12 +15,13 @@ describe("HongBao", () => {
     let snapshot: SnapshotRestorer
 
     let operator: Signer
+    let other: Signer
 
     let hongBao: HongBao
     let token: ERC20Mintable
 
     before(async () => {
-        ;[operator] = await ethers.getSigners()
+        ;[operator, other] = await ethers.getSigners()
 
         const hongBaoFactory = await ethers.getContractFactory("HongBao")
         hongBao = await hongBaoFactory.connect(operator).deploy()
@@ -28,12 +29,14 @@ describe("HongBao", () => {
         const erc20Factory = await ethers.getContractFactory("ERC20Mintable")
         token = await erc20Factory.connect(operator).deploy("TKN", "TKN")
 
-        await token
-            .connect(operator)
-            .approve(hongBao.address, ethers.constants.MaxUint256)
-        await token
-            .connect(operator)
-            .mint(operator.getAddress(), ethers.utils.parseEther("10000"))
+        for (const signer of [operator, other]) {
+            await token
+                .connect(signer)
+                .approve(hongBao.address, ethers.constants.MaxUint256)
+            await token
+                .connect(operator)
+                .mint(signer.getAddress(), ethers.utils.parseEther("10000"))
+        }
 
         snapshot = await takeSnapshot()
     })
@@ -577,6 +580,58 @@ describe("HongBao", () => {
 
             const totalSnatchAmount = await getTotalBalance(token, participants)
             expect(totalSnatchAmount).to.equal(amount)
+        })
+    })
+
+    describe("refillSnatchCampaign", () => {
+        it("should allow only owner to refill the snatch campaign", async () => {
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount: ethers.utils.parseEther("100"),
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("10"),
+            })
+
+            const tx = hongBao
+                .connect(other)
+                .refillSnatchCampaign(campaignId, 1)
+            await expect(tx).to.be.reverted
+        })
+
+        it("should refill the snatch campaign", async () => {
+            const amount = ethers.utils.parseEther("15")
+            const refillAmount = ethers.utils.parseEther("5")
+
+            const campaignId = await createSnatchCampaign(operator, {
+                token: token.address,
+                amount,
+                minSnatchAmount: ethers.utils.parseEther("10"),
+                maxSnatchAmount: ethers.utils.parseEther("10"),
+            })
+            const [p1, p2] = await createParticipants(2)
+
+            await snatch(campaignId, [p1])
+            await expect(snatch(campaignId, [p2])).to.be.reverted
+
+            const tx = await hongBao
+                .connect(operator)
+                .refillSnatchCampaign(campaignId, refillAmount)
+            const receipt = await tx.wait()
+            const [{ args }] = ContractUtil.parseEventLogsByName(
+                hongBao,
+                "CampaignRefilled",
+                receipt.logs,
+            )
+            expect(args.campaignId).to.equal(campaignId)
+            expect(args.amount).to.equal(refillAmount)
+
+            await snatch(campaignId, [p2])
+
+            const campaign = await hongBao.getSnatchCampaignInfo(campaignId)
+            expect(campaign.remainingAmount).to.equal(0)
+
+            const totalSnatchAmount = await getTotalBalance(token, [p1, p2])
+            expect(totalSnatchAmount).to.equal(amount.add(refillAmount))
         })
     })
 

@@ -40,6 +40,28 @@ contract HongBao is IHongBao, Ownable {
 
     mapping(uint256 => Campaign) private campaign;
 
+    function getCampaignInfo(
+        uint256 campaignId
+    ) external view override returns (CampaignInfo memory info) {
+        Campaign storage c = findCampaign(campaignId);
+        return
+            CampaignInfo({
+                id: campaignId,
+                name: c.name,
+                token: c.token,
+                expiry: c.expiry,
+                remainingAwardAmount: c.remainingAwardAmount,
+                remainingAwards: c.remainingAwards
+            });
+    }
+
+    function getRemainingDrawCount(
+        uint256 campaignId
+    ) external view override returns (uint8 remainingDrawCount) {
+        Campaign storage c = findCampaign(campaignId);
+        return c.participant[msg.sender];
+    }
+
     function createCampaign(
         string calldata name,
         address token,
@@ -146,27 +168,6 @@ contract HongBao is IHongBao, Ownable {
         return (award.name, award.amount);
     }
 
-    function getCampaignInfo(
-        uint256 campaignId
-    ) external view override returns (CampaignInfo memory info) {
-        Campaign storage c = findCampaign(campaignId);
-        return
-            CampaignInfo({
-                id: campaignId,
-                name: c.name,
-                token: c.token,
-                expiry: c.expiry,
-                remainingAwardAmount: c.remainingAwardAmount,
-                remainingAwards: c.remainingAwards
-            });
-    }
-
-    function getRemainingDrawCount(
-        uint256 campaignId
-    ) external view override returns (uint8 remainingDrawCount) {
-        Campaign storage c = findCampaign(campaignId);
-        return c.participant[msg.sender];
-    }
 
     /* Snatch Campaign */
 
@@ -189,6 +190,21 @@ contract HongBao is IHongBao, Ownable {
     }
 
     mapping(uint256 => SnatchCampaign) private snatchCampaign;
+
+    function getSnatchCampaignInfo(
+        uint256 campaignId
+    ) external view override returns (SnatchCampaignInfo memory info) {
+        SnatchCampaign storage sc = findSnatchCampaign(campaignId);
+        return
+            SnatchCampaignInfo({
+                name: sc.name,
+                token: sc.token,
+                expiry: sc.expiry,
+                minSnatchAmount: sc.minSnatchAmount,
+                maxSnatchAmount: sc.maxSnatchAmount,
+                remainingAmount: sc.remainingAmount
+            });
+    }
 
     function createSnatchCampaign(
         string calldata name,
@@ -233,6 +249,16 @@ contract HongBao is IHongBao, Ownable {
         delete snatchCampaign[campaignId];
     }
 
+    function refillSnatchCampaign(uint256 campaignId, uint256 amount) external override {
+        SnatchCampaign storage sc = findSnatchCampaign(campaignId);
+        require(sc.owner == msg.sender, "Only owner can refill the campaign");
+
+        IERC20(sc.token).safeTransferFrom(msg.sender, address(this), amount);
+        sc.remainingAmount += amount;
+
+        emit CampaignRefilled(campaignId, amount);
+    }
+
     function snatch(
         uint256 campaignId
     ) external override returns (uint256 amount) {
@@ -270,21 +296,6 @@ contract HongBao is IHongBao, Ownable {
         IERC20(sc.token).safeTransfer(msg.sender, amount);
 
         emit HongBaoSnatched(amount);
-    }
-
-    function getSnatchCampaignInfo(
-        uint256 campaignId
-    ) external view override returns (SnatchCampaignInfo memory info) {
-        SnatchCampaign storage sc = findSnatchCampaign(campaignId);
-        return
-            SnatchCampaignInfo({
-                name: sc.name,
-                token: sc.token,
-                expiry: sc.expiry,
-                minSnatchAmount: sc.minSnatchAmount,
-                maxSnatchAmount: sc.maxSnatchAmount,
-                remainingAmount: sc.remainingAmount
-            });
     }
 
     /* Admin */
