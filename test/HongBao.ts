@@ -1,11 +1,5 @@
 import { expect } from "chai"
-import {
-    BigNumber,
-    BigNumberish,
-    ContractTransaction,
-    Signer,
-    Wallet,
-} from "ethers"
+import { BigNumber, BigNumberish, Signer, Wallet } from "ethers"
 import { ethers } from "hardhat"
 import { PayableOverrides } from "@ethersproject/contracts"
 import {
@@ -18,29 +12,6 @@ import { ERC20Mintable, HongBao, IERC20, IHongBao } from "~/typechain-types"
 import { ContractUtil } from "~/util"
 
 describe("HongBao", () => {
-    const awards = [
-        {
-            name: "First Prize",
-            count: 1,
-            amount: ethers.utils.parseEther("100"),
-        },
-        {
-            name: "Second Prize",
-            count: 2,
-            amount: ethers.utils.parseEther("10"),
-        },
-        {
-            name: "Third Prize",
-            count: 3,
-            amount: ethers.utils.parseEther("1"),
-        },
-    ]
-    const totalAwardAmount = awards.reduce(
-        (r, a) => r.add(a.amount.mul(a.count)),
-        BigNumber.from(0),
-    )
-    const totalAwardCount = awards.reduce((r, a) => r + a.count, 0)
-
     let snapshot: SnapshotRestorer
 
     let operator: Signer
@@ -72,6 +43,29 @@ describe("HongBao", () => {
     })
 
     /* Classic Campaign */
+
+    const awards = [
+        {
+            name: "First Prize",
+            count: 1,
+            amount: ethers.utils.parseEther("100"),
+        },
+        {
+            name: "Second Prize",
+            count: 2,
+            amount: ethers.utils.parseEther("10"),
+        },
+        {
+            name: "Third Prize",
+            count: 3,
+            amount: ethers.utils.parseEther("1"),
+        },
+    ]
+    const totalAwardAmount = awards.reduce(
+        (r, a) => r.add(a.amount.mul(a.count)),
+        BigNumber.from(0),
+    )
+    const totalAwardCount = awards.reduce((r, a) => r + a.count, 0)
 
     describe("createCampaign", async () => {
         it("should not allow to create campaign when fee is not enough", async () => {
