@@ -42,62 +42,6 @@ describe("HongBao", () => {
         await snapshot.restore()
     })
 
-    describe("collectFee", () => {
-        it("should allow only owner to collect", async () => {
-            const [other] = await createParticipants(1)
-
-            const tx = hongBao.connect(other).collectFee(other.getAddress())
-
-            await expect(tx).to.be.reverted
-        })
-
-        it("should collect all fee from creating campaign", async () => {
-            const fee = ethers.utils.parseEther("1")
-            const feeCollector = Wallet.createRandom().connect(ethers.provider)
-
-            await hongBao.setCreateCampaignFee(fee)
-
-            await createCampaign(
-                operator,
-                {
-                    token: token.address,
-                    participants: [],
-                    awards: [],
-                },
-                {
-                    value: fee,
-                },
-            )
-
-            const hongBaoFeeBefore = await ethers.provider.getBalance(
-                hongBao.address,
-            )
-            expect(hongBaoFeeBefore).to.equal(fee)
-
-            const tx = await hongBao
-                .connect(operator)
-                .collectFee(feeCollector.address)
-            const receipt = await tx.wait()
-            const [{ args }] = ContractUtil.parseEventLogsByName(
-                hongBao,
-                "FeeCollected",
-                receipt.logs,
-            )
-            expect(args.recipient).to.equal(feeCollector.address)
-            expect(args.amount).to.equal(fee)
-
-            const hongBaoFeeAfter = await ethers.provider.getBalance(
-                hongBao.address,
-            )
-            expect(hongBaoFeeAfter).to.equal(0)
-
-            const feeCollectorBalance = await ethers.provider.getBalance(
-                feeCollector.address,
-            )
-            expect(feeCollectorBalance).to.equal(fee)
-        })
-    })
-
     /* Classic Campaign */
 
     const awards = [
@@ -604,7 +548,65 @@ describe("HongBao", () => {
         })
     })
 
-    /* utils */
+    /* Admin */
+
+    describe("collectFee", () => {
+        it("should allow only owner to collect", async () => {
+            const [other] = await createParticipants(1)
+
+            const tx = hongBao.connect(other).collectFee(other.getAddress())
+
+            await expect(tx).to.be.reverted
+        })
+
+        it("should collect all fee from creating campaign", async () => {
+            const fee = ethers.utils.parseEther("1")
+            const feeCollector = Wallet.createRandom().connect(ethers.provider)
+
+            await hongBao.setCreateCampaignFee(fee)
+
+            await createCampaign(
+                operator,
+                {
+                    token: token.address,
+                    participants: [],
+                    awards: [],
+                },
+                {
+                    value: fee,
+                },
+            )
+
+            const hongBaoFeeBefore = await ethers.provider.getBalance(
+                hongBao.address,
+            )
+            expect(hongBaoFeeBefore).to.equal(fee)
+
+            const tx = await hongBao
+                .connect(operator)
+                .collectFee(feeCollector.address)
+            const receipt = await tx.wait()
+            const [{ args }] = ContractUtil.parseEventLogsByName(
+                hongBao,
+                "FeeCollected",
+                receipt.logs,
+            )
+            expect(args.recipient).to.equal(feeCollector.address)
+            expect(args.amount).to.equal(fee)
+
+            const hongBaoFeeAfter = await ethers.provider.getBalance(
+                hongBao.address,
+            )
+            expect(hongBaoFeeAfter).to.equal(0)
+
+            const feeCollectorBalance = await ethers.provider.getBalance(
+                feeCollector.address,
+            )
+            expect(feeCollectorBalance).to.equal(fee)
+        })
+    })
+
+    /* Utils */
 
     async function createCampaign(
         owner: Signer,
