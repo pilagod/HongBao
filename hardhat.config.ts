@@ -15,6 +15,11 @@ const accounts = [process.env.OPERATOR_PRIVATE_KEY]
 
 module.exports = {
     networks: {
+        arbitrum: {
+            chainId: 42161,
+            url: "https://arb1.arbitrum.io/rpc",
+            accounts,
+        },
         arbitrumGoerli: {
             chainId: 421613,
             url: "https://goerli-rollup.arbitrum.io/rpc",
