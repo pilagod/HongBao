@@ -4,6 +4,12 @@ Contracts and operating scripts for HongBao protocol.
 
 ## Contract Addresses
 
+### Arbitrum
+
+| Contract | Address                                                                                                              |
+| -------- | -------------------------------------------------------------------------------------------------------------------- |
+| HongBao  | [0x8f955E5EB5e18751D8C70560f8A4DC8f9ee8efB0](https://arbiscan.io/address/0x8f955e5eb5e18751d8c70560f8a4dc8f9ee8efb0) |
+
 ### Arbitrum Goerli
 
 | Contract      | Address                                                                                                                     |
