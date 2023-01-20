@@ -297,6 +297,53 @@ describe("HongBao", () => {
             const totalDrawAmount = await getTotalBalance(token, participants)
             expect(totalDrawAmount).to.be.lt(totalAwardAmount)
         })
+
+        it("should be able to handle hundred level participants", async () => {
+            const awards = [
+                {
+                    name: "First",
+                    count: 10,
+                    amount: ethers.utils.parseEther("10"),
+                },
+                {
+                    name: "Second",
+                    count: 20,
+                    amount: ethers.utils.parseEther("7"),
+                },
+                {
+                    name: "Third",
+                    count: 30,
+                    amount: ethers.utils.parseEther("5"),
+                },
+                {
+                    name: "Fourth",
+                    count: 40,
+                    amount: ethers.utils.parseEther("3"),
+                },
+                {
+                    name: "Fifth",
+                    count: 150,
+                    amount: ethers.utils.parseEther("1"),
+                },
+            ]
+            const participants = await createParticipants(250)
+
+            const campaignId = await createCampaign(operator, {
+                token: token.address,
+                participants,
+                awards,
+            })
+
+            await draw(campaignId, participants)
+
+            const totalDrawAmount = await getTotalBalance(token, participants)
+            expect(totalDrawAmount).to.equal(
+                awards.reduce(
+                    (r, a) => r.add(a.amount.mul(a.count)),
+                    BigNumber.from(0),
+                ),
+            )
+        })
     })
 
     describe("getCampaignInfo", () => {
