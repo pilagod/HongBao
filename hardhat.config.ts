@@ -20,6 +20,11 @@ module.exports = {
             url: "https://arb1.arbitrum.io/rpc",
             accounts,
         },
+        arbitrumSepolia: {
+            chainId: 421614,
+            url: "https://sepolia-rollup.arbitrum.io/rpc",
+            accounts,
+        },
         arbitrumGoerli: {
             chainId: 421613,
             url: "https://goerli-rollup.arbitrum.io/rpc",
@@ -54,9 +59,20 @@ module.exports = {
     etherscan: {
         apiKey: {
             arbitrumOne: process.env.ARBISCAN_API_KEY,
+            arbitrumSepolia: process.env.ARBISCAN_API_KEY,
             arbitrumGoerli: process.env.ARBISCAN_API_KEY,
             polygon: process.env.POLYGONSCAN_API_KEY,
             polygonMumbai: process.env.POLYGONSCAN_API_KEY,
         },
+        customChains: [
+            {
+                network: "arbitrumSepolia",
+                chainId: 421614,
+                urls: {
+                    apiURL: "https://api-sepolia.arbiscan.io/api",
+                    browserURL: "https://sepolia.arbiscan.io/",
+                },
+            },
+        ],
     },
 }
