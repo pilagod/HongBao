@@ -14,7 +14,7 @@ Contracts and operating scripts for HongBao protocol.
 
 | Contract      | Address                                                                                                                      |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| HongBao       | [0xd93004aE1127166C0D0684fc0E5e074DD624b621](https://sepolia.arbiscan.io/address/0xd93004aE1127166C0D0684fc0E5e074DD624b621) |
+| HongBao       | [0x2C7682E37c96c89d0D8576134d6bA844A31b63A8](https://sepolia.arbiscan.io/address/0x2C7682E37c96c89d0D8576134d6bA844A31b63A8) |
 | HongBao Token | [0xb665a7b7861fBbD1e2208f92B8A70B34fF04A445](https://sepolia.arbiscan.io/address/0xb665a7b7861fBbD1e2208f92B8A70B34fF04A445) |
 
 ### Arbitrum Goerli

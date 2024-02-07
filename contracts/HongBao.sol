@@ -139,7 +139,7 @@ contract HongBao is IHongBao, Ownable {
         uint256 seed = (uint256(
             keccak256(
                 abi.encodePacked(
-                    block.number,
+                    getBlockNumber(),
                     block.timestamp,
                     campaignId,
                     c.remainingDrawCount
@@ -286,7 +286,7 @@ contract HongBao is IHongBao, Ownable {
         uint256 seed = (uint256(
             keccak256(
                 abi.encodePacked(
-                    block.number,
+                    getBlockNumber(),
                     block.timestamp,
                     campaignId,
                     sc.remainingAmount
@@ -334,5 +334,9 @@ contract HongBao is IHongBao, Ownable {
     ) internal view returns (SnatchCampaign storage sc) {
         sc = snatchCampaign[campaignId];
         require(sc.id > 0, "Campaign doesn't exist");
+    }
+
+    function getBlockNumber() internal view virtual returns (uint256) {
+        return block.number;
     }
 }
