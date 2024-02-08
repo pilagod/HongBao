@@ -102,6 +102,35 @@ describe("HongBao", () => {
     const totalAwardCount = awards.reduce((r, a) => r + a.count, 0)
 
     describe("createCampaign", async () => {
+        it("should not allow to create campaign when total award amount overflow", async () => {
+            const award = {
+                name: "Malicious Prize",
+                count: 100,
+                amount: ethers.utils.parseEther("100"),
+            }
+            const awardAmount = BigNumber.from(award.count).mul(award.amount)
+
+            const createAwardAmountOverflow = () =>
+                createCampaign(operator, {
+                    token: token.address,
+                    participants: [],
+                    awards: [
+                        {
+                            name: "Placeholder Prize",
+                            count: 1,
+                            amount: ethers.constants.MaxUint256.sub(
+                                awardAmount,
+                            ).add(1),
+                        },
+                        award,
+                    ],
+                })
+            // Error: VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)
+            await expect(createAwardAmountOverflow()).to.be.revertedWithPanic(
+                "0x11",
+            )
+        })
+
         it("should not allow to create campaign when fee is not enough", async () => {
             await hongBao.setCreateCampaignFee(ethers.utils.parseEther("100"))
 
